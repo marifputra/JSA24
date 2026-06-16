@@ -1,0 +1,179 @@
+-- PERHATIAN: file import rokok lama diganti.
+-- Untuk rokok, pakai file SUPABASE_IMPORT_ROKOK_LANGSUNG_SLOP_PCS.sql agar satuan langsung slop/pcs.
+-- Untuk obat-obatan, pakai SUPABASE_UPDATE_OBAT_PAK_PCS.sql setelah data obat masuk.
+
+-- Jalankan ini untuk import rokok langsung slop/pcs:
+-- Import rokok langsung dengan satuan besar slop dan satuan kecil pcs.
+-- Jalankan di Supabase SQL Editor.
+-- Tidak memakai bal/slop. Dari awal: 1 slop = 10 pcs.
+
+insert into products (
+  id, name, brand, category, sub, big_unit, small_unit, content_per_big,
+  stock_small, cost, price_small, price_big,
+  price_member1_small, price_member1_big, price_member2_small, price_member2_big,
+  threshold_small, img
+) values
+  (1001, 'D. SUPER 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 22800, 22900, 229000, 0, 0, 0, 0, 5, ''),
+  (1002, 'D. SUPER 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 30700, 30800, 308000, 0, 0, 0, 0, 5, ''),
+  (1003, 'D. S. MLD Cola 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 29600, 29700, 297000, 0, 0, 0, 0, 5, ''),
+  (1004, 'D. SUPER MLD 20', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 36600, 36700, 367000, 0, 0, 0, 0, 5, ''),
+  (1005, 'LA LIGHTS 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 22000, 22100, 221000, 0, 0, 0, 0, 5, ''),
+  (1006, 'LA LIGHTS 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 33700, 33800, 338000, 0, 0, 0, 0, 5, ''),
+  (1007, 'LA BOLD 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 21900, 22000, 220000, 0, 0, 0, 0, 5, ''),
+  (1008, 'LA BOLD 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 29200, 29300, 293000, 0, 0, 0, 0, 5, ''),
+  (1009, 'LA BOLD 20', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 37300, 37400, 374000, 0, 0, 0, 0, 5, ''),
+  (1010, 'LA MENTHOL 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 33700, 33800, 338000, 0, 0, 0, 0, 5, ''),
+  (1011, 'LA ICE 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 33700, 33800, 338000, 0, 0, 0, 0, 5, ''),
+  (1012, 'LA Ice Purple Boost 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 33700, 33800, 338000, 0, 0, 0, 0, 5, ''),
+  (1013, 'LA Ice Mango Boost 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 33700, 33800, 338000, 0, 0, 0, 0, 5, ''),
+  (1014, 'D. BLACK 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 33700, 33800, 338000, 0, 0, 0, 0, 5, ''),
+  (1015, 'D. BLACK CAPP 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 33700, 33800, 338000, 0, 0, 0, 0, 5, ''),
+  (1016, 'Djarum King 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 21800, 21900, 219000, 0, 0, 0, 0, 5, ''),
+  (1017, 'MLD Black Series 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 21800, 21900, 219000, 0, 0, 0, 0, 5, ''),
+  (1018, 'D 76 Madu Hitam 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 13600, 13700, 137000, 0, 0, 0, 0, 5, ''),
+  (1019, 'D 76 10', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 11200, 11300, 113000, 0, 0, 0, 0, 5, ''),
+  (1020, 'D 76 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 15400, 15500, 155000, 0, 0, 0, 0, 5, ''),
+  (1021, 'D 76 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 21000, 21100, 211000, 0, 0, 0, 0, 5, ''),
+  (1022, 'D. Safari 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 12500, 12600, 126000, 0, 0, 0, 0, 5, ''),
+  (1023, 'D. CIGARILLOS 6', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 12500, 12600, 126000, 0, 0, 0, 0, 5, ''),
+  (1024, 'DS Espresso 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 16200, 16300, 163000, 0, 0, 0, 0, 5, ''),
+  (1025, 'DS Espresso Gold 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 17600, 17700, 177000, 0, 0, 0, 0, 5, ''),
+  (1026, 'D 76 Mangga 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 14500, 14600, 146000, 0, 0, 0, 0, 5, ''),
+  (1027, 'D 76 Royal 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 15500, 15600, 156000, 0, 0, 0, 0, 5, ''),
+  (1028, 'D 76 Nanas 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 13600, 13700, 137000, 0, 0, 0, 0, 5, ''),
+  (1029, 'D 76 Apel 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 14200, 14300, 143000, 0, 0, 0, 0, 5, ''),
+  (1030, 'D 76 Mangga Royal 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 14500, 14600, 146000, 0, 0, 0, 0, 5, ''),
+  (1031, 'D 76 Apel Royal 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 14500, 14600, 146000, 0, 0, 0, 0, 5, ''),
+  (1032, 'D. Super Kretek Wraps 1', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 15900, 16000, 160000, 0, 0, 0, 0, 5, ''),
+  (1033, 'DJARUM D WRAPS 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 13400, 13500, 135000, 0, 0, 0, 0, 5, ''),
+  (1034, 'D. Safari Wraps 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 14500, 14600, 146000, 0, 0, 0, 0, 5, ''),
+  (1035, 'WARKOP 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 10900, 11000, 110000, 0, 0, 0, 0, 5, ''),
+  (1036, 'Warkop Jambu K 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 9900, 10000, 100000, 0, 0, 0, 0, 5, ''),
+  (1037, 'SENIOR 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 16500, 16600, 166000, 0, 0, 0, 0, 5, ''),
+  (1038, 'Senior Caffe Latte 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 15500, 15600, 156000, 0, 0, 0, 0, 5, ''),
+  (1039, 'Ziga K 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 9900, 10000, 100000, 0, 0, 0, 0, 5, ''),
+  (1040, 'Ziga 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 16500, 16600, 166000, 0, 0, 0, 0, 5, ''),
+  (1041, 'RUDAL 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 11500, 11600, 116000, 0, 0, 0, 0, 5, ''),
+  (1042, 'Sergio 20', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 27000, 27100, 271000, 0, 0, 0, 0, 5, ''),
+  (1043, 'SLIC KRETEK 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 10400, 10500, 105000, 0, 0, 0, 0, 5, ''),
+  (1044, 'Raptor 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 16500, 16600, 166000, 0, 0, 0, 0, 5, ''),
+  (1045, 'Raptor K 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 8900, 9000, 90000, 0, 0, 0, 0, 5, ''),
+  (1046, 'FERRO 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 20000, 20100, 201000, 0, 0, 0, 0, 5, ''),
+  (1047, 'Shoot K 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 8700, 8800, 88000, 0, 0, 0, 0, 5, ''),
+  (1048, 'CHIEF 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 16500, 16600, 166000, 0, 0, 0, 0, 5, ''),
+  (1049, 'GEO MILD 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 24000, 24100, 241000, 0, 0, 0, 0, 5, ''),
+  (1050, 'BLACK SCORPION 20', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 27900, 28000, 280000, 0, 0, 0, 0, 5, ''),
+  (1051, 'Viper K 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 9900, 10000, 100000, 0, 0, 0, 0, 5, ''),
+  (1052, 'Score Teh Manis K 12', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 7900, 8000, 80000, 0, 0, 0, 0, 5, ''),
+  (1053, 'Bit K 16', 'Rokok Djarum', 'Rokok', 'Rokok Djarum', 'slop', 'pcs', 10, 0, 10400, 10500, 105000, 0, 0, 0, 0, 5, ''),
+  (1054, 'Gudang Garam Merah', 'Gudang Garam', 'Rokok', 'Gudang Garam', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1055, 'Gudang Garam Djaja', 'Gudang Garam', 'Rokok', 'Gudang Garam', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1056, 'Gudang Garam International', 'Gudang Garam', 'Rokok', 'Gudang Garam', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1057, 'Gudang Garam Filter', 'Gudang Garam', 'Rokok', 'Gudang Garam', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1058, 'Gudang Garam Signature', 'Gudang Garam', 'Rokok', 'Gudang Garam', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1059, 'Gudang Garam Signature Mild', 'Gudang Garam', 'Rokok', 'Gudang Garam', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1060, 'Surya 12', 'Gudang Garam', 'Rokok', 'Gudang Garam', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1061, 'Surya 16', 'Gudang Garam', 'Rokok', 'Gudang Garam', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1062, 'Surya Pro Mild', 'Gudang Garam', 'Rokok', 'Gudang Garam', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1063, 'Surya Professional', 'Gudang Garam', 'Rokok', 'Gudang Garam', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1064, 'GG Mild', 'Gudang Garam', 'Rokok', 'Gudang Garam', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1065, 'GG Move', 'Gudang Garam', 'Rokok', 'Gudang Garam', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1066, 'GG Shiver', 'Gudang Garam', 'Rokok', 'Gudang Garam', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1067, 'GG Bold', 'Gudang Garam', 'Rokok', 'Gudang Garam', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1068, 'Dji Sam Soe 234', 'Sampoerna', 'Rokok', 'Sampoerna', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1069, 'Dji Sam Soe Super Premium', 'Sampoerna', 'Rokok', 'Sampoerna', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1070, 'Dji Sam Soe Magnum', 'Sampoerna', 'Rokok', 'Sampoerna', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1071, 'Dji Sam Soe Magnum Mild', 'Sampoerna', 'Rokok', 'Sampoerna', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1072, 'Sampoerna Kretek', 'Sampoerna', 'Rokok', 'Sampoerna', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1073, 'Sampoerna A Mild', 'Sampoerna', 'Rokok', 'Sampoerna', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1074, 'Sampoerna A Mild 12', 'Sampoerna', 'Rokok', 'Sampoerna', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1075, 'Sampoerna A Mild 16', 'Sampoerna', 'Rokok', 'Sampoerna', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1076, 'Sampoerna Avolution', 'Sampoerna', 'Rokok', 'Sampoerna', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1077, 'Sampoerna U Mild', 'Sampoerna', 'Rokok', 'Sampoerna', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1078, 'Sampoerna Magnum Filter', 'Sampoerna', 'Rokok', 'Sampoerna', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1079, 'Sampoerna Magnum Blue', 'Sampoerna', 'Rokok', 'Sampoerna', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1080, 'Marlboro Merah', 'Sampoerna / Philip Morris', 'Rokok', 'Sampoerna / Philip Morris', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1081, 'Marlboro Gold', 'Sampoerna / Philip Morris', 'Rokok', 'Sampoerna / Philip Morris', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1082, 'Marlboro Black Menthol', 'Sampoerna / Philip Morris', 'Rokok', 'Sampoerna / Philip Morris', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1083, 'Marlboro Filter Black', 'Sampoerna / Philip Morris', 'Rokok', 'Sampoerna / Philip Morris', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1084, 'Bentoel Biru', 'Bentoel', 'Rokok', 'Bentoel', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1085, 'Bentoel SJT', 'Bentoel', 'Rokok', 'Bentoel', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1086, 'Bentoel Sejati', 'Bentoel', 'Rokok', 'Bentoel', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1087, 'Tali Jagat Raya', 'Bentoel', 'Rokok', 'Bentoel', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1088, 'Dunhill Mixtures', 'Bentoel', 'Rokok', 'Bentoel', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1089, 'Dunhill Fine Cut', 'Bentoel', 'Rokok', 'Bentoel', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1090, 'Lucky Strike', 'Bentoel / BAT', 'Rokok', 'Bentoel / BAT', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1091, 'Ardath', 'Bentoel / BAT', 'Rokok', 'Bentoel / BAT', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1092, 'Star Mild', 'Bentoel', 'Rokok', 'Bentoel', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1093, 'Neo Mild', 'Bentoel', 'Rokok', 'Bentoel', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1094, 'Wismilak Diplomat', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1095, 'Wismilak Diplomat Blaze Filter', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1096, 'Diplomat Mild', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1097, 'Diplomat Mild Menthol', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1098, 'Diplomat Mild Berry Spark', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1099, 'Diplomat Mild Guava Spark', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1100, 'Diplomat Mild Lychee Spark', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1101, 'Diplomat Mild Mango Spark', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1102, 'Diplomat Evo', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1103, 'Diplomat Evo Mango Squizz', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1104, 'Diplomat Evo Berry Squizz', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1105, 'Diplomat Evo Lychee Squizz', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1106, 'Diplomat Evo Guava Squizz', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1107, 'Galan Kretek', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1108, 'Galan Prima', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1109, 'Galan Kretek Edisi Kawan', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1110, 'Wismilak Spesial', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1111, 'Wismilak Slim', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1112, 'Wismilak Satya', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1113, 'Wismilak Satya Wraps', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1114, 'Wismilak ARJA', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1115, 'ARJA Mangga Arumanis', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1116, 'ARJA Anggur', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1117, 'ARJA Leci', 'Wismilak', 'Rokok', 'Wismilak', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1118, 'Gudang Baru International', 'Gudang Baru', 'Rokok', 'Gudang Baru', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1119, 'Gudang Baru Origin', 'Gudang Baru', 'Rokok', 'Gudang Baru', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1120, 'Gudang Baru Filter', 'Gudang Baru', 'Rokok', 'Gudang Baru', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, ''),
+  (1121, 'Andalan Filter', 'Gudang Baru', 'Rokok', 'Gudang Baru', 'slop', 'pcs', 10, 0, 0, 0, 0, 0, 0, 0, 0, 5, '')
+on conflict (id) do update set
+  name = excluded.name,
+  brand = excluded.brand,
+  category = excluded.category,
+  sub = excluded.sub,
+  big_unit = excluded.big_unit,
+  small_unit = excluded.small_unit,
+  content_per_big = excluded.content_per_big,
+  cost = excluded.cost,
+  price_small = excluded.price_small,
+  price_big = excluded.price_big,
+  price_member1_small = excluded.price_member1_small,
+  price_member1_big = excluded.price_member1_big,
+  price_member2_small = excluded.price_member2_small,
+  price_member2_big = excluded.price_member2_big,
+  threshold_small = excluded.threshold_small,
+  img = excluded.img,
+  updated_at = now();
+
+insert into categories (name, subs)
+select
+  category,
+  to_jsonb(array_agg(sub order by sub))
+from (
+  select distinct category, sub
+  from products
+  where category = 'Rokok'
+) product_groups
+group by category
+on conflict (name) do update
+set subs = excluded.subs;
+
+select
+  category,
+  big_unit,
+  small_unit,
+  content_per_big,
+  count(*) as jumlah
+from products
+where category = 'Rokok'
+group by category, big_unit, small_unit, content_per_big
+order by category, big_unit, small_unit;
+
