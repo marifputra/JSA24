@@ -1,8 +1,11 @@
 {
   "name": "jsa-bahasa-sederhana-online",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "main": "index.js",
+  "dependencies": {
+    "mysql2": "^3.11.5"
+  },
   "scripts": {
     "build": "echo \"Build complete\"",
     "start": "node index.js",
