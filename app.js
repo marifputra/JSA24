@@ -1,4 +1,4 @@
-﻿const seed = [
+const seed = [
   {
     "id": 1001,
     "name": "D. SUPER 12",
@@ -2323,6 +2323,40 @@ const API_BASE = (window.JSA_API_BASE || '').replace(/\/$/, '');
 const IS_ADMIN_PAGE = location.pathname.includes('admin');
 const STATE_READ_ENDPOINT = IS_ADMIN_PAGE ? '/api/state' : '/api/public-state';
 const DELETED_PRODUCTS_KEY = 'jsa_deleted_products';
+const PRODUCT_CHANGE_LOG_KEY = 'jsa_product_change_log';
+const defaultPromoSlides = [
+  {
+    id: 'promo-default-1',
+    label: 'Promo Minggu Ini',
+    title: 'Belanja Grosir Lebih Hemat',
+    text: 'Cek harga terbaik untuk kebutuhan toko, rumah tangga, sembako, rokok, dan produk harian.',
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
+    cta: 'Lihat Produk',
+    href: '#produk'
+  },
+  {
+    id: 'promo-default-2',
+    label: 'Info Stok',
+    title: 'Stok Fleksibel Sesuai Satuan',
+    text: 'Pilih satuan kecil atau besar. Harga otomatis mengikuti satuan dan level member.',
+    image: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=1200&q=80',
+    cta: 'Mulai Belanja',
+    href: '#produk'
+  },
+  {
+    id: 'promo-default-3',
+    label: 'Kabar Pelanggan',
+    title: 'Kumpulkan Poin Belanja',
+    text: 'Setiap belanja Rp100.000 mendapatkan 1 poin. Cocok untuk pelanggan tetap dan reseller.',
+    image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1200&q=80',
+    cta: 'Cek Harga Member',
+    href: '#member'
+  }
+];
+let promoIndex = 0;
+let promoTimer = null;
+let editingPromoId = '';
+let editingMemberUsername = '';
 let syncingState = false;
 let serverSyncAvailable = false;
 let adminRefreshTimer = null;
@@ -2389,13 +2423,18 @@ function normalizeProduct(p) {
   };
 }
 
-const getProducts = () => (JSON.parse(localStorage.getItem('jsa_products') || 'null') || seed).map(normalizeProduct);
-function setProducts(products) {
+const getProducts = () => {
+  const stored = JSON.parse(localStorage.getItem('jsa_products') || 'null');
+  if (Array.isArray(stored)) return stored.map(normalizeProduct);
+  if (!SERVER_MODE) return seed.map(normalizeProduct);
+  return [];
+};
+function setProducts(products, options = {}) {
   const normalized = products.map(normalizeProduct);
   localStorage.setItem('jsa_products', JSON.stringify(normalized));
   localStorage.setItem('jsa_products_updated_at', String(Date.now()));
   publicProductsCache = [];
-  saveStateToServerSoon({ products: normalized });
+  if (options.sync !== false) saveStateToServerSoon({ products: normalized });
 }
 
 function productDeleteKeys(product = {}) {
@@ -2412,6 +2451,41 @@ function getDeletedProductKeys() {
 
 function setDeletedProductKeys(keys) {
   localStorage.setItem(DELETED_PRODUCTS_KEY, JSON.stringify([...keys]));
+}
+
+function getProductChangeLog() {
+  return JSON.parse(localStorage.getItem(PRODUCT_CHANGE_LOG_KEY) || '[]');
+}
+
+function setProductChangeLog(log) {
+  localStorage.setItem(PRODUCT_CHANGE_LOG_KEY, JSON.stringify(log.slice(0, 2000)));
+}
+
+function addProductChangeLog(action, beforeProduct, afterProduct) {
+  const before = beforeProduct ? normalizeProduct({ ...beforeProduct }) : null;
+  const after = afterProduct ? normalizeProduct({ ...afterProduct }) : null;
+  const product = after || before || {};
+  const fields = [];
+
+  if (before && after) {
+    Object.keys({ ...before, ...after }).forEach(key => {
+      if (JSON.stringify(before[key] ?? '') !== JSON.stringify(after[key] ?? '')) fields.push(key);
+    });
+  }
+
+  const log = getProductChangeLog();
+  log.unshift({
+    changedAt: new Date().toISOString(),
+    action,
+    id: product.id ?? '',
+    name: product.name || '',
+    category: product.category || '',
+    sub: product.sub || '',
+    changedFields: fields.join(', '),
+    before,
+    after
+  });
+  setProductChangeLog(log);
 }
 
 function rememberDeletedProduct(product = {}) {
@@ -2498,10 +2572,50 @@ function setOrders(orders) {
   saveStateToServerSoon({ orders });
 }
 
-const getMembers = () => JSON.parse(localStorage.getItem('jsa_members') || '[]');
+const getMembers = () => JSON.parse(localStorage.getItem('jsa_members') || '[]').map(normalizeMemberAccount);
 function setMembers(members) {
-  localStorage.setItem('jsa_members', JSON.stringify(members));
-  saveStateToServerSoon({ members });
+  const normalized = members.map(normalizeMemberAccount);
+  localStorage.setItem('jsa_members', JSON.stringify(normalized));
+  saveStateToServerSoon({ members: normalized });
+}
+
+function normalizeMemberAccount(member = {}) {
+  const username = String(member.username || member.id || member.phone || member.name || '').trim();
+  return {
+    id: username,
+    username,
+    name: String(member.name || '').trim(),
+    phone: normalizePhone(member.phone || ''),
+    address: String(member.address || '').trim(),
+    level: ['MEMBER 1', 'MEMBER 2', 'MEMBER 3'].includes(member.level) ? member.level : 'MEMBER 3',
+    active: member.active === undefined ? true : member.active !== false && member.active !== '0',
+    joinedAt: member.joinedAt || new Date().toLocaleString('id-ID')
+  };
+}
+
+function normalizePromoSlide(slide = {}) {
+  const rawTitle = String(slide.title || '').trim();
+  return {
+    id: String(slide.id || `promo-${Date.now()}`),
+    label: String(slide.label || '').trim() || 'Promo',
+    title: rawTitle || 'Judul Promo',
+    text: String(slide.text || '').trim() || 'Tulis deskripsi promo di sini.',
+    image: String(slide.image || '').trim() || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
+    cta: String(slide.cta || '').trim() || 'Lihat Produk',
+    href: String(slide.href || '').trim() || '#produk'
+  };
+}
+
+function getPromos() {
+  const stored = JSON.parse(localStorage.getItem('jsa_promos') || 'null');
+  const source = Array.isArray(stored) && stored.length ? stored : defaultPromoSlides;
+  return source.map(normalizePromoSlide);
+}
+
+function setPromos(promos, options = {}) {
+  const normalized = promos.map(normalizePromoSlide);
+  localStorage.setItem('jsa_promos', JSON.stringify(normalized));
+  if (options.sync !== false) saveStateToServerSoon({ promos: normalized });
 }
 
 function buyerLevelLabel(level) {
@@ -2520,7 +2634,11 @@ function getCheckoutProfile() {
 }
 
 function saveCheckoutProfile() {
-  const profile = {
+  const member = getMember();
+  const profile = member ? {
+    name: member.name || '',
+    phone: normalizePhone(member.phone || '')
+  } : {
     name: byId('buyerName')?.value.trim() || '',
     phone: normalizePhone(byId('buyerPhone')?.value || '')
   };
@@ -2538,7 +2656,8 @@ function currentState() {
     products: getProducts(),
     categories: getCategories(),
     orders: getOrders(),
-    members: getMembers()
+    members: getMembers(),
+    promos: getPromos()
   };
 }
 
@@ -2547,6 +2666,7 @@ function applyServerState(state) {
   if (Array.isArray(state.categories)) localStorage.setItem('jsa_categories', JSON.stringify(state.categories));
   if (Array.isArray(state.orders)) localStorage.setItem('jsa_orders', JSON.stringify(state.orders));
   if (Array.isArray(state.members)) localStorage.setItem('jsa_members', JSON.stringify(state.members));
+  if (Array.isArray(state.promos)) localStorage.setItem('jsa_promos', JSON.stringify(state.promos.map(normalizePromoSlide)));
 }
 
 let saveTimer = null;
@@ -2610,12 +2730,8 @@ async function loadStateFromServer() {
       applyServerState(state);
       serverSyncAvailable = true;
     } else {
-      await fetch(API_BASE + '/api/state', {
-        method: 'POST',
-        headers: apiHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify(currentState())
-      });
-      serverSyncAvailable = true;
+      serverSyncAvailable = false;
+      throw new Error('Data server tidak valid. Data browser tidak dikirim ulang ke server.');
     }
   } catch (err) {
     serverSyncAvailable = false;
@@ -2640,6 +2756,67 @@ function adminIsEditing() {
   return ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) && !el.readOnly;
 }
 
+function renderPromoSlider() {
+  const track = document.getElementById('promoTrack');
+  const dots = document.getElementById('promoDots');
+  if (!track || !dots) return;
+  const slides = getPromos();
+  if (promoIndex >= slides.length) promoIndex = 0;
+
+  track.innerHTML = slides.map((slide, index) => `
+    <article class="promo-slide" aria-label="Promo ${index + 1}">
+      <div class="promo-image" style="background-image:url('${slide.image}')"></div>
+      <div class="promo-content">
+        <span class="promo-kicker">${escapeHtml(slide.label)}</span>
+        <h3>${escapeHtml(slide.title)}</h3>
+        <p>${escapeHtml(slide.text)}</p>
+        <a class="btn" href="${escapeHtml(slide.href)}">${escapeHtml(slide.cta)}</a>
+      </div>
+    </article>
+  `).join('');
+
+  dots.innerHTML = slides.map((_, index) => `
+    <button class="promo-dot ${index === promoIndex ? 'active' : ''}" type="button" onclick="goToPromoSlide(${index})" aria-label="Lihat promo ${index + 1}"></button>
+  `).join('');
+
+  updatePromoSlider();
+  startPromoAutoSlide();
+}
+
+function updatePromoSlider() {
+  const track = document.getElementById('promoTrack');
+  const dots = document.querySelectorAll('.promo-dot');
+  if (!track) return;
+  track.style.transform = `translateX(-${promoIndex * 100}%)`;
+  dots.forEach((dot, index) => dot.classList.toggle('active', index === promoIndex));
+}
+
+function goToPromoSlide(index) {
+  const slides = getPromos();
+  if (!slides.length) return;
+  promoIndex = (index + slides.length) % slides.length;
+  updatePromoSlider();
+  startPromoAutoSlide();
+}
+
+function nextPromoSlide() {
+  goToPromoSlide(promoIndex + 1);
+}
+
+function prevPromoSlide() {
+  goToPromoSlide(promoIndex - 1);
+}
+
+function startPromoAutoSlide() {
+  clearInterval(promoTimer);
+  const slides = getPromos();
+  if (!slides.length) return;
+  promoTimer = setInterval(() => {
+    promoIndex = (promoIndex + 1) % getPromos().length;
+    updatePromoSlider();
+  }, 5500);
+}
+
 function renderCurrentAdminPage() {
   const page = localStorage.getItem('jsa_admin_page') || 'kategori';
   renderStats();
@@ -2654,6 +2831,7 @@ function renderCurrentAdminPage() {
     refreshCategoryOptions();
   }
   if (page === 'akun') renderMembers();
+  if (page === 'promo') renderPromoAdmin();
 }
 
 async function refreshAdminFromServer(force = false) {
@@ -2746,6 +2924,16 @@ async function authenticateMember(username, password) {
     }
   }
 
+  const adminAccount = getMembers().find(m => m.username === username);
+  if (adminAccount) {
+    if (!adminAccount.active) throw new Error('Akun member ini sedang nonaktif. Hubungi admin.');
+    if (password !== 'member123') throw new Error('Username atau password member salah.');
+    return {
+      ...adminAccount,
+      joinedAt: new Date().toLocaleString('id-ID')
+    };
+  }
+
   const account = memberAccounts.find(m => m.username === username && m.password === password);
   if(!account) throw new Error('Username atau password member salah.');
   return {
@@ -2770,6 +2958,7 @@ const productPerPageDesktop = 60;
 const productPerPageMobile = 6;
 let openProductId = localStorage.getItem('jsa_open_product') || '';
 let openProductGroups = JSON.parse(localStorage.getItem('jsa_open_product_groups') || '{}');
+let openMemberAccounts = JSON.parse(localStorage.getItem('jsa_open_member_accounts') || '{}');
 let publicCatalogMeta = null;
 let productFetchSeq = 0;
 let publicProductsCache = [];
@@ -2897,9 +3086,9 @@ async function loadPublicCatalogMeta() {
 async function init() {
   await loadStateFromServer();
 
-  if (!localStorage.getItem('jsa_products')) setProducts(seed);
-  if (!localStorage.getItem('jsa_categories')) setCategories(defaultCategories);
-  if (IS_ADMIN_PAGE) ensureDataBarangRokokTambahan();
+  if (!SERVER_MODE && !localStorage.getItem('jsa_products')) setProducts(seed);
+  if (!SERVER_MODE && !localStorage.getItem('jsa_categories')) setCategories(defaultCategories);
+  if (IS_ADMIN_PAGE && !SERVER_MODE) ensureDataBarangRokokTambahan();
   if (IS_ADMIN_PAGE) syncStoredProductsWithNormalization();
   if (IS_ADMIN_PAGE) syncCategoriesWithProducts();
 
@@ -2912,6 +3101,7 @@ async function init() {
       renderProducts();
     };
   }
+  renderPromoSlider();
   renderProducts();
   renderCart();
   startPublicAutoRefresh();
@@ -3212,20 +3402,32 @@ function renderMemberBox() {
   const info = document.getElementById('memberInfoBox');
   const buyer = document.getElementById('buyerName');
   const phone = document.getElementById('buyerPhone');
-  const profile = getCheckoutProfile();
 
   if (!login) return;
-
-  if (buyer) buyer.value = profile.name || '';
-  if (phone) phone.value = profile.phone || '';
 
   if (m) {
     login.classList.add('hidden');
     info.classList.remove('hidden');
     document.getElementById('memberGreeting').textContent = 'Halo, ' + m.name + ' (' + (m.level || 'MEMBER') + ')';
+    if (buyer) {
+      buyer.value = m.name || '';
+      buyer.readOnly = true;
+    }
+    if (phone) {
+      phone.value = normalizePhone(m.phone || '');
+      phone.readOnly = true;
+    }
   } else {
     login.classList.remove('hidden');
     info.classList.add('hidden');
+    if (buyer) {
+      buyer.value = '';
+      buyer.readOnly = false;
+    }
+    if (phone) {
+      phone.value = '';
+      phone.readOnly = false;
+    }
   }
 }
 
@@ -3426,7 +3628,7 @@ function clearCart() {
 }
 
 function rememberBuyer(member) {
-  if (!member?.phone) return;
+  return;
   const members = getMembers();
   const old = members.find(m => String(m.phone) === String(member.phone) || String(m.username) === String(member.phone));
   const record = {
@@ -3450,64 +3652,100 @@ function makeReceiptPdf(order) {
   }
 
   const { jsPDF } = window.jspdf;
+  const items = Array.isArray(order.items) ? order.items : [];
+  const estimatedItemsHeight = items.reduce((sum, item) => {
+    const nameLines = Math.max(1, Math.ceil(String(item.name || '').length / 34));
+    return sum + 9 + (nameLines * 4.2);
+  }, 0);
+  const receiptHeight = Math.max(190, Math.min(1800, 92 + estimatedItemsHeight));
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: [80, 160]
+    format: [80, receiptHeight]
   });
 
-  let y = 8;
-  const line = (txt, x = 5, size = 9, bold = false) => {
-    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+  let y = 7;
+  const pageWidth = 80;
+  const left = 4;
+  const right = 76;
+  const line = (txt, x = left, size = 8, bold = false, gap = 4.2) => {
+    doc.setFont('courier', bold ? 'bold' : 'normal');
     doc.setFontSize(size);
     doc.text(String(txt), x, y);
-    y += 5;
+    y += gap;
   };
 
-  const center = (txt, size = 10, bold = false) => {
-    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+  const center = (txt, size = 8, bold = false, gap = 4.2) => {
+    doc.setFont('courier', bold ? 'bold' : 'normal');
     doc.setFontSize(size);
-    doc.text(String(txt), 40, y, { align: 'center' });
-    y += 5;
+    doc.text(String(txt), pageWidth / 2, y, { align: 'center' });
+    y += gap;
   };
 
-  const rupiah = v => 'Rp ' + Number(v || 0).toLocaleString('id-ID');
+  const rightLine = (txt, size = 8, bold = false, gap = 4.2) => {
+    doc.setFont('courier', bold ? 'bold' : 'normal');
+    doc.setFontSize(size);
+    doc.text(String(txt), right, y, { align: 'right' });
+    y += gap;
+  };
 
-  center('JSA JAYA SAKTI ABADI', 11, true);
-  center('Grosir sejak 1980', 8, false);
-  center('STRUK BELANJA', 10, true);
-  line('--------------------------------', 5, 9);
-  line('No   : ' + order.id, 5, 8);
-  line('Tgl  : ' + order.date, 5, 8);
-  line('Nama : ' + order.memberName, 5, 8);
-  line('HP   : ' + order.memberPhone, 5, 8);
-  line('--------------------------------', 5, 9);
+  const rupiah = v => Number(v || 0).toLocaleString('id-ID') + ',00';
+  const separator = () => {
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(7.5);
+    doc.text('----------------------------------------', left, y);
+    y += 4;
+  };
 
-  order.items.forEach((item, index) => {
-    const nama = `${index + 1}. ${item.name}`;
-    const splitName = doc.splitTextToSize(nama, 70);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.text(splitName, 5, y);
+  const dateText = String(order.date || new Date().toLocaleString('id-ID'));
+  const paid = Number(order.cashPaid ?? order.paid ?? order.total ?? 0);
+  const change = Math.max(0, paid - Number(order.total || 0));
+
+  center('JSA JAYA SAKTI ABADI', 10, true, 4.6);
+  center('GROSIR SEMBAKO DAN KEBUTUHAN TOKO', 7.2);
+  center('Sejak 1980', 7.2);
+  center('Telp/WA: -', 7.2);
+  y += 1;
+  separator();
+  line('No.   : ' + order.id, left, 7.5);
+  line('Tgl   : ' + dateText, left, 7.5);
+  line('Kasir : ADMIN', left, 7.5);
+  line('Pel.  : ' + (order.memberName || 'CASH'), left, 7.5);
+  separator();
+
+  items.forEach((item, index) => {
+    const numberedName = `${index + 1}. ${String(item.name || '').toUpperCase()}`;
+    const splitName = doc.splitTextToSize(numberedName, 72);
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(8.2);
+    doc.text(splitName, left, y);
     y += splitName.length * 4;
 
-    const qtyText = `${item.displayQty || item.qty} ${item.displayUnit || item.smallUnit || ''} x ${rupiah(item.displayPrice || item.price || 0)}`;
-    line(qtyText, 7, 8);
-    line('Subtotal: ' + rupiah(item.subtotal), 7, 8);
-    y += 1;
-
-    if (y > 145) {
-      doc.addPage([80, 160], 'portrait');
-      y = 8;
-    }
+    const qty = Number(item.displayQty ?? item.qty ?? 0).toLocaleString('id-ID', { maximumFractionDigits: 2 });
+    const unit = String(item.displayUnit || item.smallUnit || 'PCS').toUpperCase();
+    const price = rupiah(item.displayPrice || item.price || 0);
+    const detail = `${qty} ${unit} x ${price} =`;
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(7.5);
+    doc.text(detail, left, y);
+    doc.text(rupiah(item.subtotal), right, y, { align: 'right' });
+    y += 5;
   });
 
-  line('--------------------------------', 5, 9);
-  line('TOTAL : ' + rupiah(order.total), 5, 10, true);
-  line('POIN  : ' + order.points, 5, 9, true);
-  line('--------------------------------', 5, 9);
-  center('Terima kasih sudah belanja', 8);
-  center('di JSA Jaya Sakti Abadi', 8);
+  separator();
+  line('TOTAL', left, 9, true, 0);
+  rightLine(rupiah(order.total), 9, true, 5);
+  line('TUNAI', left, 8, false, 0);
+  rightLine(rupiah(paid), 8, false, 4.5);
+  separator();
+  line('KEMBALI', left, 8.5, true, 0);
+  rightLine(rupiah(change), 8.5, true, 5);
+  line('POIN    : ' + Number(order.points || 0), left, 7.5);
+  separator();
+  center('TERIMAKASIH SUDAH BELANJA DI TOKO', 7.4, false);
+  center('JSA JAYA SAKTI ABADI', 8.2, true);
+  y += 2;
+  center('MAAF TIDAK MENERIMA KREDIT', 7.4, true);
 
   doc.save('struk-jsa-' + order.id + '.pdf');
 }
@@ -3521,15 +3759,19 @@ function downloadOrderPdf(orderId) {
 async function checkout() {
   const activeMember = getMember();
   if (!activeMember) return alert('Silakan login member dulu.');
-  const profile = saveCheckoutProfile();
-  if (!profile.name) return alert('Nama pembeli wajib diisi sebelum checkout.');
-  if (!profile.phone) return alert('Nomor telepon pembeli wajib diisi sebelum checkout.');
-  if (profile.phone.length < 8) return alert('Nomor telepon terlalu pendek.');
+  const profile = {
+    name: activeMember.name || '',
+    phone: normalizePhone(activeMember.phone || '')
+  };
+  if (!profile.name) return alert('Nama akun member belum diisi admin.');
+  if (!profile.phone) return alert('Nomor WhatsApp akun member belum diisi admin.');
+  if (profile.phone.length < 8) return alert('Nomor WhatsApp akun member terlalu pendek.');
   const member = {
-    id: profile.phone,
-    username: profile.phone,
+    id: activeMember.username || activeMember.id || profile.phone,
+    username: activeMember.username || activeMember.id || profile.phone,
     name: profile.name,
     phone: profile.phone,
+    address: activeMember.address || '',
     level: activeMember.level || 'MEMBER 3',
     accountUsername: activeMember.username || activeMember.id || '',
     accountName: activeMember.name || '',
@@ -3620,6 +3862,7 @@ async function checkout() {
     memberName: member.name,
     memberPhone: member.phone,
     memberLevel: member.level,
+    accountUsername: member.username,
     items,
     total,
     modal,
@@ -3645,7 +3888,7 @@ function showAdminPage(page){
   if(target) target.classList.add('active');
 
   const btns = document.querySelectorAll('.tab-btn');
-  const map = {kategori:0, tambah:1, barang:2, stok:3, member:4, akun:5, backup:6};
+  const map = {kategori:0, tambah:1, barang:2, stok:3, member:4, promo:5, akun:6, backup:7};
   if(btns[map[page]]) btns[map[page]].classList.add('active');
 
   localStorage.setItem('jsa_admin_page', page);
@@ -3656,6 +3899,7 @@ function showAdminPage(page){
   if(page === 'barang') renderAdmin();
   if(page === 'kategori') renderCategoryAdmin();
   if(page === 'akun') renderMembers();
+  if(page === 'promo') renderPromoAdmin();
 }
 
 async function login() {
@@ -4038,6 +4282,7 @@ async function saveInlineProduct(id) {
   const products = getProducts();
   const p = products.find(x => String(x.id) === String(id));
   if (!p) return;
+  const beforeProduct = { ...p };
 
   p.name = document.getElementById('name_' + id).value;
   p.brand = document.getElementById('brand_' + id).value || getMerek(p.name);
@@ -4059,9 +4304,10 @@ async function saveInlineProduct(id) {
   p.thresholdSmall = n(document.getElementById('threshold_' + id).value);
   p.img = document.getElementById('img_' + id).value;
 
-  setProducts(products);
+  addProductChangeLog('edit', beforeProduct, p);
+  setProducts(products, { sync: false });
   try {
-    await saveStateToServerNow({ products: products.map(normalizeProduct) });
+    await saveStateToServerNow({ products: [normalizeProduct(p)] });
   } catch (err) {
     return alert('Data di browser berubah, tapi gagal tersimpan ke server: ' + err.message);
   }
@@ -4102,9 +4348,10 @@ async function saveProduct() {
   const products = getProducts();
   products.push(product);
   forgetDeletedProduct(product);
-  setProducts(products);
+  addProductChangeLog('tambah', null, product);
+  setProducts(products, { sync: false });
   try {
-    await saveStateToServerNow({ products: products.map(normalizeProduct) });
+    await saveStateToServerNow({ products: [normalizeProduct(product)] });
   } catch (err) {
     return alert('Data di browser berubah, tapi gagal tersimpan ke server: ' + err.message);
   }
@@ -4124,12 +4371,12 @@ async function deleteProduct(id) {
   const deleted = currentProducts.find(p => String(p.id) === sid) || { id: sid };
   rememberDeletedProduct(deleted);
   const products = currentProducts.filter(p => String(p.id) !== sid);
-  setProducts(products);
+  addProductChangeLog('hapus', deleted, null);
+  setProducts(products, { sync: false });
   try {
-    await saveStateToServerNow({
-      deletedProductIds: [sid],
-      products: products.map(normalizeProduct)
-    });
+    // Kirim daftar terbaru bersamaan dengan ID yang dihapus. Ini menimpa
+    // sinkronisasi tertunda yang mungkin masih membawa produk versi lama.
+    await saveStateToServerNow({ deletedProductIds: [sid], products });
   } catch (err) {
     return alert('Data di browser berubah, tapi gagal tersimpan ke server: ' + err.message);
   }
@@ -4180,45 +4427,298 @@ function renderMembers() {
   const members = getMembers();
   const orders = getOrders();
   if (!members.length) {
-    el.innerHTML = '<p class="muted">Belum ada member yang masuk.</p>';
+    el.innerHTML = '<p class="muted">Belum ada akun member. Tambahkan akun pertama dari form di atas.</p>';
     return;
   }
 
   el.innerHTML = `
-    <div class="table-wrap">
+    <div class="member-admin-list">
+      ${members.map(m => {
+        const memberOrders = ordersForMemberAccount(m, orders);
+        const total = memberOrders.reduce((s, o) => s + n(o.total), 0);
+        const points = memberOrders.reduce((s, o) => s + n(o.points), 0);
+        const oldMatchedOrders = memberOrders.filter(o => !String(o.accountUsername || '').trim()).length;
+        const memberKey = String(m.username || m.id || '');
+        const isOpen = !!openMemberAccounts[memberKey];
+        const recentOrders = memberOrders.slice(0, 3);
+        const history = recentOrders.length ? recentOrders.map(o => `
+          <div class="member-history-item">
+            <span>${escapeHtml(o.date || '-')}</span>
+            <b>${rp(o.total)}</b>
+            <small>${n(o.points)} poin</small>
+          </div>
+        `).join('') : '<p class="muted">Belum ada riwayat belanja.</p>';
+        const more = memberOrders.length > recentOrders.length
+          ? `<small class="member-history-more">+ ${memberOrders.length - recentOrders.length} transaksi lain</small>`
+          : '';
+
+        return `
+          <article class="member-admin-card ${isOpen ? 'open' : ''}">
+            <button class="member-admin-head" type="button" onclick="toggleMemberAccountDetail('${escapeHtml(memberKey)}')">
+              <div>
+                <b>${escapeHtml(m.name || '-')}</b>
+                <span>@${escapeHtml(m.username || m.id || '-')}</span>
+              </div>
+              <div class="member-head-meta">
+                <strong class="member-status ${m.active ? 'active' : 'inactive'}">${m.active ? 'Aktif' : 'Nonaktif'}</strong>
+                <span class="member-mini-total">${rp(total)} - ${points} poin</span>
+                <span class="member-arrow ${isOpen ? 'is-open' : ''}" aria-hidden="true"></span>
+              </div>
+            </button>
+
+            <div class="member-admin-detail ${isOpen ? '' : 'hidden'}">
+              <div class="member-admin-grid">
+                <div><span>Level Harga</span><b class="level-badge">${escapeHtml(m.level || 'MEMBER 3')}</b></div>
+                <div><span>No WA</span><b>${escapeHtml(m.phone || '-')}</b></div>
+                <div><span>Alamat</span><b>${escapeHtml(m.address || '-')}</b></div>
+                <div><span>Total Belanja</span><b>${rp(total)}</b></div>
+                <div><span>Poin</span><b>${points}</b></div>
+                <div><span>Transaksi</span><b>${memberOrders.length}</b></div>
+              </div>
+
+              <div class="member-history-box">
+                <div class="member-history-title">
+                  <b>Riwayat Terakhir</b>
+                  ${more}
+                </div>
+                ${oldMatchedOrders ? `<small class="member-history-more">${oldMatchedOrders} transaksi lama dicocokkan dari nama/WA</small>` : ''}
+                ${history}
+              </div>
+
+              <div class="member-actions">
+                <button class="btn secondary" onclick="editMemberAccount('${escapeHtml(m.username)}')">Edit</button>
+                <button class="btn ${m.active ? 'danger' : 'secondary'}" onclick="toggleMemberAccount('${escapeHtml(m.username)}')">${m.active ? 'Nonaktifkan' : 'Aktifkan'}</button>
+                <button class="btn danger" onclick="deleteMemberAccount('${escapeHtml(m.username)}')">Hapus</button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function ordersForMemberAccount(member, orders = getOrders()) {
+  const username = String(member.username || member.id || '');
+  const phone = normalizePhone(member.phone || '');
+  const name = String(member.name || '').trim().toLowerCase();
+  if (!username) return [];
+  return orders.filter(order => {
+    const orderUsername = String(order.accountUsername || '').trim();
+    if (orderUsername) return orderUsername === username;
+
+    const orderPhone = normalizePhone(order.memberPhone || '');
+    const orderName = String(order.memberName || '').trim().toLowerCase();
+    return (phone && orderPhone && orderPhone === phone) || (name && orderName && orderName === name);
+  });
+}
+
+function toggleMemberAccountDetail(username) {
+  openMemberAccounts[username] = !openMemberAccounts[username];
+  localStorage.setItem('jsa_open_member_accounts', JSON.stringify(openMemberAccounts));
+  renderMembers();
+}
+
+function clearMemberAccountForm() {
+  editingMemberUsername = '';
+  ['memberUsernameAdmin','memberNameAdmin','memberPhoneAdmin','memberAddressAdmin'].forEach(id => {
+    const el = byId(id);
+    if (el) el.value = '';
+  });
+  if (byId('memberLevelAdmin')) byId('memberLevelAdmin').value = 'MEMBER 3';
+  if (byId('memberActiveAdmin')) byId('memberActiveAdmin').value = '1';
+  if (byId('memberUsernameAdmin')) byId('memberUsernameAdmin').readOnly = false;
+}
+
+async function saveMemberAccount() {
+  const oldUsername = String(editingMemberUsername || '').trim();
+  const username = (byId('memberUsernameAdmin')?.value || '').trim();
+  const member = normalizeMemberAccount({
+    username,
+    name: byId('memberNameAdmin')?.value,
+    phone: byId('memberPhoneAdmin')?.value,
+    address: byId('memberAddressAdmin')?.value,
+    level: byId('memberLevelAdmin')?.value,
+    active: byId('memberActiveAdmin')?.value !== '0',
+    joinedAt: new Date().toLocaleString('id-ID')
+  });
+
+  if (!member.username) return alert('Username login wajib diisi.');
+  if (!member.name) return alert('Nama pelanggan wajib diisi.');
+  if (!member.phone) return alert('Nomor WhatsApp wajib diisi.');
+
+  const members = getMembers();
+  const duplicate = members.find(m => m.username === member.username && m.username !== oldUsername);
+  if (duplicate) return alert('Username sudah dipakai.');
+  const index = members.findIndex(m => m.username === (oldUsername || member.username));
+  if (index >= 0) members[index] = { ...members[index], ...member };
+  else members.unshift(member);
+
+  setMembers(members);
+  try {
+    const patch = { members };
+    if (oldUsername && oldUsername !== member.username) patch.deletedMemberUsernames = [oldUsername];
+    await saveStateToServerNow(patch);
+  } catch (err) {
+    return alert('Akun tersimpan di browser, tapi gagal tersimpan ke server: ' + err.message);
+  }
+
+  clearMemberAccountForm();
+  renderMembers();
+  renderStats();
+  alert('Akun member berhasil disimpan. Password login: member123');
+}
+
+function editMemberAccount(username) {
+  const member = getMembers().find(m => m.username === username);
+  if (!member) return;
+  editingMemberUsername = member.username;
+  byId('memberUsernameAdmin').value = member.username;
+  byId('memberUsernameAdmin').readOnly = false;
+  byId('memberNameAdmin').value = member.name || '';
+  byId('memberPhoneAdmin').value = member.phone || '';
+  byId('memberAddressAdmin').value = member.address || '';
+  byId('memberLevelAdmin').value = member.level || 'MEMBER 3';
+  byId('memberActiveAdmin').value = member.active ? '1' : '0';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function toggleMemberAccount(username) {
+  const members = getMembers();
+  const member = members.find(m => m.username === username);
+  if (!member) return;
+  member.active = !member.active;
+  setMembers(members);
+  try {
+    await saveStateToServerNow({ members });
+  } catch (err) {
+    return alert('Status akun berubah di browser, tapi gagal tersimpan ke server: ' + err.message);
+  }
+  renderMembers();
+}
+
+async function deleteMemberAccount(username) {
+  const member = getMembers().find(m => m.username === username);
+  if (!member) return;
+  if (!confirm(`Hapus akun member "${member.username}"? Riwayat belanja tetap tersimpan di transaksi.`)) return;
+
+  const members = getMembers().filter(m => m.username !== username);
+  setMembers(members, { sync: false });
+  try {
+    await saveStateToServerNow({ deletedMemberUsernames: [username] });
+  } catch (err) {
+    return alert('Akun terhapus di browser, tapi gagal terhapus di server: ' + err.message);
+  }
+
+  if (getMember()?.username === username) {
+    localStorage.removeItem('jsa_member');
+    updateMemberAccess();
+  }
+  clearMemberAccountForm();
+  renderMembers();
+  renderStats();
+}
+
+function clearPromoForm() {
+  editingPromoId = '';
+  ['promoLabel','promoTitle','promoText','promoImage','promoCta','promoHref'].forEach(id => {
+    const el = byId(id);
+    if (el) el.value = '';
+  });
+}
+
+function renderPromoAdmin() {
+  const el = byId('promoAdminList');
+  if (!el) return;
+  const promos = getPromos();
+  el.innerHTML = `
+    <div class="table-wrap" style="margin-top:16px">
       <table>
         <thead>
           <tr>
-            <th>Username</th>
-            <th>Nama</th>
-            <th>Level</th>
-            <th>HP</th>
-            <th>Terakhir Masuk</th>
-            <th>Total Belanja</th>
-            <th>Poin</th>
+            <th>Gambar</th>
+            <th>Label</th>
+            <th>Judul</th>
+            <th>Deskripsi</th>
+            <th>Link</th>
+            <th>Aksi</th>
           </tr>
         </thead>
         <tbody>
-          ${members.map(m => {
-            const memberOrders = orders.filter(o => String(o.memberPhone) === String(m.phone) || String(o.memberName) === String(m.name));
-            const total = memberOrders.reduce((s, o) => s + n(o.total), 0);
-            const points = memberOrders.reduce((s, o) => s + n(o.points), 0);
-            return `
-              <tr>
-                <td>${escapeHtml(m.username || m.id || '-')}</td>
-                <td><b>${escapeHtml(m.name)}</b></td>
-                <td><span class="level-badge">${escapeHtml(m.level || 'MEMBER')}</span></td>
-                <td>${escapeHtml(m.phone || '-')}</td>
-                <td>${escapeHtml(m.joinedAt || '-')}</td>
-                <td>${rp(total)}</td>
-                <td><b>${points}</b></td>
-              </tr>
-            `;
-          }).join('')}
+          ${promos.map(promo => `
+            <tr>
+              <td><img src="${escapeHtml(promo.image)}" alt="${escapeHtml(promo.title)}" style="width:110px;height:64px;object-fit:cover;border-radius:8px;background:#eefbff"></td>
+              <td>${escapeHtml(promo.label)}</td>
+              <td><b>${escapeHtml(promo.title)}</b></td>
+              <td>${escapeHtml(promo.text)}</td>
+              <td>${escapeHtml(promo.href)}</td>
+              <td>
+                <button class="btn secondary" onclick="editPromoSlide('${promo.id}')">Edit</button>
+                <button class="btn danger" onclick="deletePromoSlide('${promo.id}')">Hapus</button>
+              </td>
+            </tr>
+          `).join('')}
         </tbody>
       </table>
     </div>
   `;
+}
+
+async function savePromoSlide() {
+  const promo = normalizePromoSlide({
+    id: editingPromoId || String(Date.now()),
+    label: byId('promoLabel')?.value,
+    title: byId('promoTitle')?.value,
+    text: byId('promoText')?.value,
+    image: byId('promoImage')?.value,
+    cta: byId('promoCta')?.value,
+    href: byId('promoHref')?.value
+  });
+
+  if (!promo.title || promo.title === 'Judul Promo') return alert('Judul promo wajib diisi.');
+  const promos = getPromos();
+  const index = promos.findIndex(item => String(item.id) === String(promo.id));
+  if (index >= 0) promos[index] = promo;
+  else promos.unshift(promo);
+
+  setPromos(promos, { sync: false });
+  try {
+    await saveStateToServerNow({ promos: promos.map(normalizePromoSlide) });
+  } catch (err) {
+    return alert('Promo tersimpan di browser, tapi gagal tersimpan ke server: ' + err.message);
+  }
+
+  clearPromoForm();
+  renderPromoAdmin();
+  renderPromoSlider();
+  alert('Promo berhasil disimpan.');
+}
+
+function editPromoSlide(id) {
+  const promo = getPromos().find(item => String(item.id) === String(id));
+  if (!promo) return;
+  editingPromoId = promo.id;
+  byId('promoLabel').value = promo.label;
+  byId('promoTitle').value = promo.title;
+  byId('promoText').value = promo.text;
+  byId('promoImage').value = promo.image;
+  byId('promoCta').value = promo.cta;
+  byId('promoHref').value = promo.href;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function deletePromoSlide(id) {
+  if (!confirm('Hapus promo ini?')) return;
+  const promos = getPromos().filter(item => String(item.id) !== String(id));
+  setPromos(promos, { sync: false });
+  try {
+    await saveStateToServerNow({ promos: promos.map(normalizePromoSlide) });
+  } catch (err) {
+    return alert('Promo terhapus di browser, tapi gagal tersimpan ke server: ' + err.message);
+  }
+  clearPromoForm();
+  renderPromoAdmin();
+  renderPromoSlider();
 }
 
 function clearMembers() {
@@ -4230,21 +4730,239 @@ function clearMembers() {
   updateMemberAccess();
 }
 
-function exportData() {
-  const payload = {
-    exportedAt: new Date().toISOString(),
-    products: getProducts(),
-    categories: getCategories(),
-    orders: getOrders(),
-    members: getMembers()
+function dailyBackupDateStamp() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function orderItemsForBackup(orders = []) {
+  return orders.flatMap(order => (order.items || []).map(item => ({
+    orderId: order.id,
+    orderDate: order.date,
+    memberName: order.memberName,
+    memberPhone: order.memberPhone,
+    memberLevel: order.memberLevel,
+    productId: item.id,
+    productName: item.name,
+    saleType: item.saleType,
+    displayQty: item.displayQty,
+    displayUnit: item.displayUnit,
+    qtySmall: item.qtySmall,
+    smallUnit: item.smallUnit,
+    displayPrice: item.displayPrice,
+    subtotal: item.subtotal,
+    modal: item.modal,
+    profit: item.profit
+  })));
+}
+
+function dailyBackupSummary(products, orders, members, categories, productChangeLog) {
+  const totalRevenue = orders.reduce((sum, order) => sum + n(order.total), 0);
+  const totalModal = orders.reduce((sum, order) => sum + n(order.modal), 0);
+  const totalProfit = orders.reduce((sum, order) => sum + n(order.profit), 0);
+  const stockValue = products.reduce((sum, product) => sum + n(product.stockSmall) * n(product.cost), 0);
+  const stockEmpty = products.filter(product => n(product.stockSmall) <= 0).length;
+  const stockLow = products.filter(product => n(product.stockSmall) > 0 && n(product.stockSmall) <= Number(product.thresholdSmall ?? 5)).length;
+
+  return {
+    backupDate: dailyBackupDateStamp(),
+    productCount: products.length,
+    categoryCount: categories.length,
+    orderCount: orders.length,
+    orderItemCount: orderItemsForBackup(orders).length,
+    memberCount: members.length,
+    productChangeCount: productChangeLog.length,
+    totalRevenue,
+    totalModal,
+    totalProfit,
+    profitMargin: totalRevenue ? totalProfit / totalRevenue : 0,
+    stockValue,
+    stockEmpty,
+    stockLow
   };
+}
+
+async function createDailyBackupPayload() {
+  if (SERVER_MODE) {
+    await loadStateFromServer();
+    if (!serverSyncAvailable) {
+      throw new Error('Gagal mengambil data terbaru dari server/Supabase. Backup dibatalkan agar tidak memakai data browser yang lama.');
+    }
+  }
+
+  const products = getProducts();
+  const categories = getCategories();
+  const orders = getOrders();
+  const members = getMembers();
+  const promos = getPromos();
+  const productChangeLog = getProductChangeLog();
+  const orderItems = orderItemsForBackup(orders);
+  const summary = dailyBackupSummary(products, orders, members, categories, productChangeLog);
+
+  return {
+    exportedAt: new Date().toISOString(),
+    source: SERVER_MODE ? 'server-supabase' : 'browser-local',
+    summary,
+    products,
+    categories,
+    orders,
+    orderItems,
+    members,
+    promos,
+    productChangeLog
+  };
+}
+
+function downloadJson(filename, payload) {
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'backup-jsa-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+async function exportDailyBackupJson() {
+  try {
+    const payload = await createDailyBackupPayload();
+    downloadJson('backup-harian-jsa-' + dailyBackupDateStamp() + '.json', payload);
+    alert('Backup harian JSON berhasil dibuat dari data terbaru.');
+  } catch (err) {
+    alert('Backup gagal: ' + err.message);
+  }
+}
+
+function productRowsForExcel(products) {
+  return products.map(product => ({
+    ID: product.id,
+    Nama: product.name,
+    Brand: product.brand,
+    Kategori: product.category,
+    Sub: product.sub,
+    UnitBesar: product.bigUnit,
+    UnitKecil: product.smallUnit,
+    IsiPerBesar: product.contentPerBig,
+    StokKecil: product.stockSmall,
+    ModalKecil: product.cost,
+    HargaKecil: product.priceSmall,
+    HargaBesar: product.priceBig,
+    Member1Kecil: product.priceMember1Small,
+    Member1Besar: product.priceMember1Big,
+    Member2Kecil: product.priceMember2Small,
+    Member2Besar: product.priceMember2Big,
+    BatasStok: product.thresholdSmall,
+    StatusStok: n(product.stockSmall) <= 0 ? 'HABIS' : n(product.stockSmall) <= Number(product.thresholdSmall ?? 5) ? 'MENIPIS' : 'AMAN',
+    NilaiStokModal: n(product.stockSmall) * n(product.cost),
+    Gambar: product.img || ''
+  }));
+}
+
+function productChangeRowsForExcel(log) {
+  return log.map(item => ({
+    TanggalEdit: item.changedAt,
+    Aksi: item.action,
+    ID: item.id,
+    Nama: item.name,
+    Kategori: item.category,
+    Sub: item.sub,
+    FieldBerubah: item.changedFields,
+    DataLama: item.before ? JSON.stringify(item.before) : '',
+    DataBaru: item.after ? JSON.stringify(item.after) : ''
+  }));
+}
+
+function orderRowsForExcel(orders) {
+  return orders.map(order => ({
+    OrderID: order.id,
+    Tanggal: order.date,
+    NamaPembeli: order.memberName,
+    HP: order.memberPhone,
+    Level: order.memberLevel,
+    Total: order.total,
+    Modal: order.modal,
+    Keuntungan: order.profit,
+    Poin: order.points,
+    Siap: order.prepared ? 'Ya' : 'Tidak'
+  }));
+}
+
+function orderItemRowsForExcel(orderItems) {
+  return orderItems.map(item => ({
+    OrderID: item.orderId,
+    Tanggal: item.orderDate,
+    NamaPembeli: item.memberName,
+    HP: item.memberPhone,
+    ProdukID: item.productId,
+    NamaProduk: item.productName,
+    TipeJual: item.saleType,
+    QtyDisplay: item.displayQty,
+    UnitDisplay: item.displayUnit,
+    QtyKecil: item.qtySmall,
+    UnitKecil: item.smallUnit,
+    Harga: item.displayPrice,
+    Subtotal: item.subtotal,
+    Modal: item.modal,
+    Keuntungan: item.profit
+  }));
+}
+
+function memberRowsForExcel(members, orders) {
+  return members.map(member => {
+    const memberOrders = ordersForMemberAccount(member, orders);
+    return {
+      Username: member.username || member.id || '',
+      Nama: member.name,
+      HP: member.phone,
+      Alamat: member.address || '',
+      Level: member.level,
+      Status: member.active ? 'Aktif' : 'Nonaktif',
+      TanggalGabung: member.joinedAt,
+      TotalBelanja: memberOrders.reduce((sum, order) => sum + n(order.total), 0),
+      TotalPoin: memberOrders.reduce((sum, order) => sum + n(order.points), 0),
+      JumlahTransaksi: memberOrders.length
+    };
+  });
+}
+
+function promoRowsForExcel(promos) {
+  return promos.map(promo => ({
+    ID: promo.id,
+    Label: promo.label,
+    Judul: promo.title,
+    Deskripsi: promo.text,
+    Gambar: promo.image,
+    Tombol: promo.cta,
+    Link: promo.href
+  }));
+}
+
+async function exportDailyBackupExcel() {
+  try {
+    if (!window.XLSX) throw new Error('Library Excel belum terbaca. Pastikan internet aktif saat membuka admin.');
+    const payload = await createDailyBackupPayload();
+    const workbook = XLSX.utils.book_new();
+    const summaryRows = Object.entries(payload.summary).map(([key, value]) => ({ Keterangan: key, Nilai: value }));
+
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(summaryRows), 'Ringkasan');
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(productRowsForExcel(payload.products)), 'Produk');
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(productChangeRowsForExcel(payload.productChangeLog)), 'Riwayat Edit Barang');
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(orderRowsForExcel(payload.orders)), 'Transaksi');
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(orderItemRowsForExcel(payload.orderItems)), 'Barang Terjual');
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(memberRowsForExcel(payload.members, payload.orders)), 'Pembeli Member');
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(promoRowsForExcel(payload.promos)), 'Berita Promo');
+    XLSX.writeFile(workbook, 'backup-harian-jsa-' + dailyBackupDateStamp() + '.xlsx');
+    alert('Backup harian Excel berhasil dibuat dari data terbaru.');
+  } catch (err) {
+    alert('Backup gagal: ' + err.message);
+  }
+}
+
+function exportData() {
+  exportDailyBackupJson();
 }
 
 function importData(event) {
@@ -4258,12 +4976,13 @@ function importData(event) {
       if (!Array.isArray(data.products) || !Array.isArray(data.categories)) {
         throw new Error('Format backup tidak valid');
       }
-      if (!confirm('Import backup akan mengganti data produk, kategori, transaksi, dan member. Lanjutkan?')) return;
+      if (!confirm('Import backup akan mengganti data produk, kategori, transaksi, member, dan berita promo. Lanjutkan?')) return;
       localStorage.removeItem(DELETED_PRODUCTS_KEY);
       setProducts(data.products);
       setCategories(data.categories);
       setOrders(Array.isArray(data.orders) ? data.orders : []);
       setMembers(Array.isArray(data.members) ? data.members : []);
+      if (Array.isArray(data.promos)) setPromos(data.promos);
       cart = [];
       saveCart();
       showDash();
@@ -4323,12 +5042,97 @@ function getStockRows(){
   });
 }
 
+function productSalesKey(value){
+  return String(value || '').trim().toLowerCase();
+}
+
+function formatQtyByProduct(product, qtySmall){
+  if(!product) return String(qtySmall);
+  return formatStock({ ...product, stockSmall: qtySmall });
+}
+
+function getSalesPerformanceRows(){
+  const products = getProducts();
+  const rowsByKey = new Map();
+  const keyById = new Map();
+  const keyByName = new Map();
+
+  products.forEach((p, index) => {
+    const key = p.id ? `id:${p.id}` : `name:${productSalesKey(p.name)}`;
+    const row = {
+      no: index + 1,
+      id: p.id,
+      nama: p.name,
+      brand: p.brand || getMerek(p.name),
+      kategori: p.category || '',
+      sub: p.sub || '',
+      product: p,
+      soldSmall: 0,
+      revenue: 0,
+      modal: 0,
+      profit: 0,
+      orderCount: 0,
+      stokTampil: formatStock(p),
+      stokKecil: n(p.stockSmall || 0),
+      satuanKecil: p.smallUnit || ''
+    };
+    rowsByKey.set(key, row);
+    if(p.id) keyById.set(String(p.id), key);
+    keyByName.set(productSalesKey(p.name), key);
+  });
+
+  getOrders().forEach(order => {
+    const touchedKeys = new Set();
+    (order.items || []).forEach(item => {
+      const key = keyById.get(String(item.id)) || keyByName.get(productSalesKey(item.name)) || `name:${productSalesKey(item.name)}`;
+      if(!rowsByKey.has(key)){
+        rowsByKey.set(key, {
+          no: rowsByKey.size + 1,
+          id: item.id || '',
+          nama: item.name || 'Barang tanpa nama',
+          brand: '',
+          kategori: '',
+          sub: '',
+          product: null,
+          soldSmall: 0,
+          revenue: 0,
+          modal: 0,
+          profit: 0,
+          orderCount: 0,
+          stokTampil: '-',
+          stokKecil: 0,
+          satuanKecil: item.smallUnit || ''
+        });
+      }
+
+      const row = rowsByKey.get(key);
+      row.soldSmall += n(item.qtySmall || item.qty || 0);
+      row.revenue += n(item.subtotal || 0);
+      row.modal += n(item.modal || 0);
+      row.profit += n(item.profit || (n(item.subtotal || 0) - n(item.modal || 0)));
+      if(item.smallUnit && !row.satuanKecil) row.satuanKecil = item.smallUnit;
+      touchedKeys.add(key);
+    });
+    touchedKeys.forEach(key => {
+      const row = rowsByKey.get(key);
+      if(row) row.orderCount += 1;
+    });
+  });
+
+  return Array.from(rowsByKey.values()).map((row, index) => ({
+    ...row,
+    no: index + 1,
+    soldText: formatQtyByProduct(row.product, +row.soldSmall.toFixed(2)),
+    avgProfit: row.soldSmall > 0 ? row.profit / row.soldSmall : 0
+  }));
+}
+
 function setActiveStockTab(){
-  ['Alert','Category','Merek','All'].forEach(name=>{
+  ['Alert','Performance','Category','Merek','All'].forEach(name=>{
     const el = document.getElementById('stockTab' + name);
     if(el) el.classList.remove('active');
   });
-  const map = {alert:'Alert', category:'Category', brand:'Merek', all:'All'};
+  const map = {alert:'Alert', performance:'Performance', category:'Category', brand:'Merek', all:'All'};
   const activeEl = document.getElementById('stockTab' + map[stockView]);
   if(activeEl) activeEl.classList.add('active');
 }
@@ -4338,7 +5142,9 @@ function renderStockReport(){
 
   const box = document.getElementById('stockReport');
   const summary = document.getElementById('stockSummary');
+  const sortBox = document.getElementById('salesSortBox');
   if(!box) return;
+  if(sortBox) sortBox.classList.toggle('hidden', stockView !== 'performance');
 
   const q = (document.getElementById('stockSearch')?.value || '').toLowerCase().trim();
   const rows = getStockRows().filter(r => {
@@ -4366,6 +5172,10 @@ function renderStockReport(){
     if(!alertRows.length) box.innerHTML = '<p class="muted">Tidak ada barang menipis atau habis. Semua stok aman.</p>';
   }
 
+  if(stockView === 'performance'){
+    box.innerHTML = renderSalesPerformanceTable();
+  }
+
   if(stockView === 'category'){
     box.innerHTML = renderGroupedStock(rows, 'kategori');
   }
@@ -4379,6 +5189,71 @@ function renderStockReport(){
   }
 
   showStockAlertPopup();
+}
+
+function renderSalesPerformanceTable(){
+  const q = (document.getElementById('stockSearch')?.value || '').toLowerCase().trim();
+  const sort = document.getElementById('salesSort')?.value || 'profit';
+  let rows = getSalesPerformanceRows().filter(r => {
+    const text = `${r.nama} ${r.brand} ${r.kategori} ${r.sub}`.toLowerCase();
+    return !q || q.split(/\s+/).every(w => text.includes(w));
+  });
+
+  const sorters = {
+    profit: (a,b) => b.profit - a.profit,
+    sold: (a,b) => b.soldSmall - a.soldSmall,
+    revenue: (a,b) => b.revenue - a.revenue,
+    stockLow: (a,b) => a.stokKecil - b.stokKecil,
+    name: (a,b) => a.nama.localeCompare(b.nama)
+  };
+  rows.sort(sorters[sort] || sorters.profit);
+  rows = rows.map((row, index) => ({ ...row, rank: index + 1 }));
+
+  if(!rows.length) return '<p class="muted">Data performa penjualan tidak ditemukan.</p>';
+
+  const totalSoldItems = rows.filter(r => r.soldSmall > 0).length;
+  const totalRevenue = rows.reduce((sum, row) => sum + row.revenue, 0);
+  const totalProfit = rows.reduce((sum, row) => sum + row.profit, 0);
+  const topProfit = rows[0];
+
+  return `
+    <div class="stock-summary">
+      <div class="mini-stat"><span>Barang Pernah Terjual</span><b>${totalSoldItems}</b></div>
+      <div class="mini-stat"><span>Total Omzet</span><b>${rp(totalRevenue)}</b></div>
+      <div class="mini-stat"><span>Total Untung</span><b>${rp(totalProfit)}</b></div>
+      <div class="mini-stat"><span>Posisi Teratas</span><b>${escapeHtml(topProfit?.nama || '-')}</b></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Produk</th>
+            <th>Terjual</th>
+            <th>Omzet</th>
+            <th>Modal</th>
+            <th>Untung</th>
+            <th>Transaksi</th>
+            <th>Stok Sisa</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td><b>${r.rank}</b></td>
+              <td><b>${escapeHtml(r.nama)}</b><br><small>${escapeHtml(r.kategori || '-')} / ${escapeHtml(r.sub || '-')}</small></td>
+              <td><b>${escapeHtml(r.soldText)}</b><br><small>${r.soldSmall} ${escapeHtml(r.satuanKecil || '')}</small></td>
+              <td>${rp(r.revenue)}</td>
+              <td>${rp(r.modal)}</td>
+              <td><b>${rp(r.profit)}</b></td>
+              <td>${r.orderCount} kali</td>
+              <td>${escapeHtml(r.stokTampil)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 function renderGroupedStock(rows, key){
@@ -4605,7 +5480,9 @@ function exportStockPdf(){
 
 
 function formatOrderItemsCompact(items){
-  if(!items || !items.length) return '-';
+  if(!items || !items.length) {
+    return '<span class="status-badge warning">Detail barang kosong</span>';
+  }
   const first = items.slice(0, 3).map(i => `${escapeHtml(i.name)} x${i.displayQty || i.qty} ${escapeHtml(i.displayUnit || i.smallUnit || '')}`).join('<br>');
   const more = items.length > 3 ? `<br><small>+ ${items.length - 3} item lainnya</small>` : '';
   return first + more;
@@ -4635,7 +5512,154 @@ function toggleOrderPrepared(orderId) {
   updateOrderBadge();
 }
 
+function recalculateOrder(order) {
+  order.items = Array.isArray(order.items) ? order.items : [];
+  order.total = order.items.reduce((sum, item) => sum + n(item.subtotal), 0);
+  order.modal = order.items.reduce((sum, item) => sum + n(item.modal), 0);
+  order.profit = order.total - order.modal;
+  order.points = Math.floor(order.total / 100000);
+  return order;
+}
+
+async function syncOrdersAndProducts(orders, products) {
+  localStorage.setItem('jsa_orders', JSON.stringify(orders));
+  localStorage.setItem('jsa_products', JSON.stringify(products.map(normalizeProduct)));
+  try {
+    await saveStateToServerNow({ orders, products: products.map(normalizeProduct) });
+  } catch (err) {
+    return alert('Data berubah di browser, tapi gagal tersimpan ke server: ' + err.message);
+  }
+  renderOrders();
+  renderStats();
+  renderProducts();
+  renderStockReport();
+  updateStockBadge();
+}
+
+async function editOrderItem(orderId, itemIndex) {
+  const orders = getOrders();
+  const products = getProducts();
+  const order = orders.find(o => String(o.id) === String(orderId));
+  const item = order?.items?.[itemIndex];
+  if (!order || !item) return alert('Item transaksi tidak ditemukan.');
+
+  const product = products.find(p => String(p.id) === String(item.id));
+  const oldDisplayQty = n(item.displayQty || item.qty || 0);
+  const oldQtySmall = n(item.qtySmall || item.qty || 0);
+  const oldDisplayPrice = n(item.displayPrice || item.price || 0);
+  const oldModal = n(item.modal || 0);
+
+  const nextDisplayQtyText = prompt('Jumlah yang dibeli', oldDisplayQty);
+  if (nextDisplayQtyText === null) return;
+  const nextDisplayQty = n(nextDisplayQtyText);
+  if (nextDisplayQty <= 0) return alert('Jumlah harus lebih dari 0.');
+
+  const nextDisplayPriceText = prompt('Harga jual per satuan', oldDisplayPrice);
+  if (nextDisplayPriceText === null) return;
+  const nextDisplayPrice = n(nextDisplayPriceText);
+  if (nextDisplayPrice < 0) return alert('Harga tidak valid.');
+
+  const nextModalText = prompt('Modal total item ini', oldModal);
+  if (nextModalText === null) return;
+  const nextModal = n(nextModalText);
+  if (nextModal < 0) return alert('Modal tidak valid.');
+
+  const oldRatio = oldDisplayQty ? oldQtySmall / oldDisplayQty : 1;
+  const unitRatio = item.saleType === 'besar'
+    ? n(product?.contentPerBig || oldRatio || 1)
+    : 1;
+  const nextQtySmall = +(nextDisplayQty * unitRatio).toFixed(2);
+  const stockDiff = +(nextQtySmall - oldQtySmall).toFixed(2);
+
+  if (product && stockDiff > n(product.stockSmall)) {
+    const lanjut = confirm(`Stok ${product.name} kurang. Tersedia ${formatStock(product)}. Tetap simpan edit transaksi?`);
+    if (!lanjut) return;
+  }
+
+  if (product) {
+    product.stockSmall = +(n(product.stockSmall) - stockDiff).toFixed(2);
+  }
+
+  item.displayQty = nextDisplayQty;
+  item.qtySmall = nextQtySmall;
+  item.displayPrice = nextDisplayPrice;
+  item.price = nextDisplayPrice;
+  item.subtotal = nextDisplayQty * nextDisplayPrice;
+  item.modal = nextModal;
+  item.profit = item.subtotal - item.modal;
+  if (product) item.costSmall = n(product.cost || item.costSmall || 0);
+
+  recalculateOrder(order);
+  await syncOrdersAndProducts(orders, products);
+  alert('Item transaksi berhasil diedit.');
+}
+
+async function deleteOrderItem(orderId, itemIndex) {
+  if (!confirm('Hapus item dari transaksi ini? Stok produk akan dikembalikan.')) return;
+  const orders = getOrders();
+  const products = getProducts();
+  const orderIndex = orders.findIndex(o => String(o.id) === String(orderId));
+  const order = orders[orderIndex];
+  const item = order?.items?.[itemIndex];
+  if (!order || !item) return alert('Item transaksi tidak ditemukan.');
+
+  const product = products.find(p => String(p.id) === String(item.id));
+  if (product) {
+    product.stockSmall = +(n(product.stockSmall) + n(item.qtySmall || item.qty || 0)).toFixed(2);
+  }
+
+  order.items.splice(itemIndex, 1);
+  if (!order.items.length) {
+    if (!confirm('Transaksi ini sudah tidak punya item. Hapus transaksi sekalian?')) return;
+    orders.splice(orderIndex, 1);
+  } else {
+    recalculateOrder(order);
+  }
+
+  await syncOrdersAndProducts(orders, products);
+  alert('Item transaksi berhasil dihapus.');
+}
+
+async function deleteOrderTransaction(orderId) {
+  if (!confirm('Hapus transaksi ini? Semua stok barang dalam transaksi akan dikembalikan.')) return;
+  const orders = getOrders();
+  const products = getProducts();
+  const orderIndex = orders.findIndex(o => String(o.id) === String(orderId));
+  const order = orders[orderIndex];
+  if (!order) return alert('Transaksi tidak ditemukan.');
+
+  (order.items || []).forEach(item => {
+    const product = products.find(p => String(p.id) === String(item.id));
+    if (!product) return;
+    product.stockSmall = +(n(product.stockSmall) + n(item.qtySmall || item.qty || 0)).toFixed(2);
+  });
+
+  orders.splice(orderIndex, 1);
+  if (String(openOrderId) === String(orderId)) {
+    openOrderId = '';
+    localStorage.setItem('jsa_open_order', '');
+  }
+
+  await syncOrdersAndProducts(orders, products);
+  updateOrderBadge();
+  alert('Transaksi berhasil dihapus dan stok dikembalikan.');
+}
+
 function orderDetailHtml(o){
+  const items = Array.isArray(o.items) ? o.items : [];
+  if(!items.length){
+    return `
+      <div class="order-detail-box">
+        <h4>Detail Belanja</h4>
+        <p class="muted">
+          Detail barang transaksi ini kosong/belum ikut tersimpan. Total transaksi masih ada,
+          tapi daftar barang tidak bisa ditampilkan. Pulihkan dari backup lama jika ingin melihat
+          isi barangnya lagi.
+        </p>
+      </div>
+    `;
+  }
+
   return `
     <div class="order-detail-box">
       <h4>Detail Belanja</h4>
@@ -4649,10 +5673,11 @@ function orderDetailHtml(o){
               <th>Subtotal</th>
               <th>Modal</th>
               <th>Untung</th>
+              <th>Aksi</th>
             </tr>
           </thead>
           <tbody>
-            ${o.items.map(i => `
+            ${items.map((i, index) => `
               <tr>
                 <td>${escapeHtml(i.name)}</td>
                 <td>${i.displayQty || i.qty} ${escapeHtml(i.displayUnit || i.smallUnit || '')}<br><small>Stok: ${i.qtySmall || i.qty} ${escapeHtml(i.smallUnit || '')}</small></td>
@@ -4660,6 +5685,10 @@ function orderDetailHtml(o){
                 <td>${rp(i.subtotal)}</td>
                 <td>${rp(i.modal)}</td>
                 <td><b>${rp(i.profit)}</b></td>
+                <td>
+                  <button class="small-btn" onclick="editOrderItem(${o.id}, ${index})">Edit</button>
+                  <button class="prep-btn" onclick="deleteOrderItem(${o.id}, ${index})">Hapus</button>
+                </td>
               </tr>
             `).join('')}
           </tbody>
@@ -4716,6 +5745,7 @@ function renderOrders() {
                   <button class="prep-btn ${o.prepared ? 'done' : ''}" onclick="toggleOrderPrepared(${o.id})">${o.prepared ? 'Sudah Disiapkan' : 'Siapkan'}</button>
                   <button class="small-btn" onclick="toggleOrderDetail(${o.id})">${isOpen ? 'Minimize' : 'Detail'}</button>
                   <button class="small-btn" onclick="downloadOrderPdf(${o.id})">PDF</button>
+                  <button class="prep-btn" onclick="deleteOrderTransaction(${o.id})">Hapus Transaksi</button>
                 </td>
               </tr>
               <tr class="order-detail-row ${isOpen ? '' : 'hidden'}">
@@ -4743,6 +5773,9 @@ function clearOrders() {
 }
 
 async function resetAllData() {
+  if (SERVER_MODE) {
+    return alert('Reset data seed dimatikan di hosting agar data Supabase tidak kembali ke awal.');
+  }
   if (!confirm('Reset semua data?')) return;
   localStorage.setItem('jsa_products', JSON.stringify(seed.map(normalizeProduct)));
   localStorage.setItem('jsa_categories', JSON.stringify(defaultCategories));
