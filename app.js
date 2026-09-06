@@ -3789,9 +3789,13 @@ async function checkout() {
       const result = await res.json();
       if (!res.ok || !result.ok) return alert(result.error || 'Checkout gagal.');
 
-      syncingState = true;
-      applyServerState(result.state);
-      syncingState = false;
+      // Checkout hanya menerima order baru; katalog lengkap tidak perlu dikirim
+      // ulang ke pembeli setiap transaksi.
+      if (result.state) {
+        syncingState = true;
+        applyServerState(result.state);
+        syncingState = false;
+      }
 
       makeReceiptPdf(result.order);
       alert('Checkout berhasil. Stok dikurangi di server lokal.');
