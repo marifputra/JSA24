@@ -1,3 +1,5 @@
+// Hostinger sering memakai UTC; pakai WIB untuk seluruh tanggal transaksi JSA.
+process.env.TZ = process.env.TZ || 'Asia/Jakarta';
 const http=require('http'),fs=require('fs'),path=require('path'),crypto=require('crypto'),mysql=require('mysql2/promise');
 const ROOT=__dirname,PORT=Number(process.env.PORT||3000),HOST=process.env.HOST||'0.0.0.0';
 const ADMIN_USERNAME=process.env.ADMIN_USERNAME||'admin',ADMIN_PASSWORD=process.env.ADMIN_PASSWORD||'GANTI_PASSWORD_ADMIN',ADMIN_API_TOKEN=process.env.ADMIN_API_TOKEN||'',SESSION_SECRET=process.env.ADMIN_SESSION_SECRET||ADMIN_API_TOKEN||ADMIN_PASSWORD;
