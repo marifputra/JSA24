@@ -181,6 +181,121 @@ nav a:hover{
   letter-spacing:0;
 }
 
+.promo-section{
+  padding:24px 6% 10px;
+}
+
+.promo-slider{
+  position:relative;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:white;
+  box-shadow:var(--shadow);
+}
+
+.promo-track{
+  display:flex;
+  transition:transform .45s ease;
+  will-change:transform;
+}
+
+.promo-slide{
+  min-width:100%;
+  display:grid;
+  grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);
+  align-items:stretch;
+  background:white;
+}
+
+.promo-image{
+  min-height:320px;
+  background-size:cover;
+  background-position:center;
+  position:relative;
+}
+
+.promo-image::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(90deg,rgba(18,50,67,.05),rgba(18,50,67,.34));
+}
+
+.promo-content{
+  padding:clamp(22px,4vw,44px);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+
+.promo-kicker{
+  display:inline-flex;
+  width:max-content;
+  padding:7px 10px;
+  border:1px solid #bfefff;
+  border-radius:999px;
+  color:var(--blue2);
+  font-weight:900;
+  font-size:12px;
+  margin-bottom:12px;
+  background:#f3fcff;
+}
+
+.promo-content h3{
+  margin:0;
+  font-size:clamp(26px,3vw,42px);
+  line-height:1.05;
+}
+
+.promo-content p{
+  margin:12px 0 18px;
+  color:#456;
+  line-height:1.55;
+}
+
+.promo-nav{
+  position:absolute;
+  top:50%;
+  z-index:2;
+  width:42px;
+  height:42px;
+  border:0;
+  border-radius:999px;
+  background:rgba(255,255,255,.9);
+  color:var(--dark);
+  font-size:22px;
+  font-weight:900;
+  cursor:pointer;
+  transform:translateY(-50%);
+  box-shadow:0 8px 20px rgba(18,50,67,.18);
+}
+
+.promo-prev{left:12px}
+.promo-next{right:12px}
+
+.promo-dots{
+  display:flex;
+  justify-content:center;
+  gap:8px;
+  margin-top:12px;
+}
+
+.promo-dot{
+  width:10px;
+  height:10px;
+  border:0;
+  border-radius:999px;
+  background:#c9d7e8;
+  cursor:pointer;
+  transition:width .2s ease, background .2s ease;
+}
+
+.promo-dot.active{
+  width:28px;
+  background:var(--blue2);
+}
+
 .hero-card,.panel,.cart,.product,.stat-card,.features div,.modal-box{
   border:1px solid rgba(216,231,236,.9);
   border-radius:8px;
@@ -482,4 +597,249 @@ td,th{
     z-index:auto;
     margin-top:4px;
   }
+}
+
+@media(max-width:720px){
+  .promo-section{
+    padding:16px 14px 6px;
+  }
+
+  .promo-slide{
+    grid-template-columns:1fr;
+  }
+
+  .promo-image{
+    min-height:210px;
+  }
+
+  .promo-content{
+    padding:20px;
+  }
+
+  .promo-nav{
+    width:36px;
+    height:36px;
+    font-size:18px;
+  }
+}
+
+.member-admin-list{
+  display:grid;
+  gap:14px;
+  margin-top:18px;
+}
+
+.member-admin-card{
+  background:white;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:16px;
+  box-shadow:0 10px 24px rgba(24,68,84,.08);
+}
+
+.member-admin-head{
+  width:100%;
+  border:0;
+  background:white;
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+  text-align:left;
+  color:var(--dark);
+  cursor:pointer;
+  padding:0;
+}
+
+.member-admin-card.open .member-admin-head{
+  border-bottom:1px solid #e8f7fb;
+  padding-bottom:12px;
+  margin-bottom:12px;
+}
+
+.member-admin-head b{
+  display:block;
+  font-size:20px;
+}
+
+.member-admin-head span{
+  display:block;
+  color:#668;
+  margin-top:3px;
+  font-weight:800;
+}
+
+.member-head-meta{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.member-mini-total{
+  color:#456!important;
+  font-size:13px;
+  font-weight:900!important;
+  white-space:nowrap;
+}
+
+.member-arrow{
+  width:0;
+  height:0;
+  display:inline-block;
+  border-top:8px solid transparent;
+  border-bottom:8px solid transparent;
+  border-left:11px solid var(--blue2);
+  transition:transform .18s ease;
+}
+
+.member-arrow.is-open{
+  transform:rotate(90deg);
+}
+
+.member-admin-detail.hidden{
+  display:none;
+}
+
+.member-status{
+  border-radius:999px;
+  padding:7px 11px;
+  font-size:13px;
+  white-space:nowrap;
+}
+
+.member-status.active{
+  background:#e8fff1;
+  color:#168a3a;
+}
+
+.member-status.inactive{
+  background:#ffe8e5;
+  color:#dc2626;
+}
+
+.member-admin-grid{
+  display:grid;
+  grid-template-columns:repeat(6,minmax(120px,1fr));
+  gap:10px;
+}
+
+.member-admin-grid div{
+  background:#f7fdff;
+  border:1px solid #d8f5ff;
+  border-radius:10px;
+  padding:10px;
+  min-width:0;
+}
+
+.member-admin-grid span{
+  display:block;
+  color:#668;
+  font-size:12px;
+  font-weight:800;
+  margin-bottom:5px;
+}
+
+.member-admin-grid b{
+  display:block;
+  overflow-wrap:anywhere;
+}
+
+.member-history-box{
+  margin-top:12px;
+  background:#fbfeff;
+  border:1px solid #e2f7ff;
+  border-radius:10px;
+  padding:12px;
+}
+
+.member-history-title{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  align-items:center;
+  margin-bottom:8px;
+}
+
+.member-history-more{
+  color:#668;
+  font-weight:800;
+}
+
+.member-history-item{
+  display:grid;
+  grid-template-columns:minmax(140px,1fr) auto auto;
+  gap:10px;
+  align-items:center;
+  padding:8px 0;
+  border-top:1px solid #edf7fa;
+}
+
+.member-history-item span{
+  color:#456;
+  overflow-wrap:anywhere;
+}
+
+.member-history-item b{
+  color:var(--dark);
+  white-space:nowrap;
+}
+
+.member-history-item small{
+  color:var(--blue2);
+  font-weight:900;
+  white-space:nowrap;
+}
+
+.member-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+
+.member-actions .btn{
+  margin-left:0;
+  border-radius:10px;
+  padding:10px 14px;
+}
+
+@media(max-width:1000px){
+  .member-admin-grid{
+    grid-template-columns:repeat(3,minmax(120px,1fr));
+  }
+}
+
+@media(max-width:640px){
+  .member-admin-head,.member-history-title{
+    display:block;
+  }
+
+  .member-head-meta{
+    justify-content:flex-start;
+    margin-top:10px;
+  }
+
+  .member-status{
+    display:inline-block;
+  }
+
+  .member-admin-grid{
+    grid-template-columns:1fr;
+  }
+
+  .member-history-item{
+    grid-template-columns:1fr;
+    gap:3px;
+  }
+
+  .member-actions .btn{
+    width:100%;
+  }
+}
+/* Pengaman: sembunyikan tombol reset data massal di semua halaman admin. */
+button[onclick*="resetAllData"] {
+  display: none !important;
 }
