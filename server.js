@@ -48,3 +48,21 @@ save=async function(data){
   return state();
 };
 module.exports={appHandler,api,send};
+
+// Respons checkout sengaja ringkas. Versi awal turut mengirim seluruh state
+// (semua produk, member, dan order) ke setiap pembeli, yang boros bandwidth.
+const apiBeforeSlimCheckout = api;
+api = async function(req, res) {
+  if (req.method === 'POST' && req.url === '/api/checkout') {
+    if (!limited(req, 'checkout', 30)) return send(res, 429, { ok:false, error:'Terlalu banyak checkout.' });
+    const requestBody = await body(req);
+    try {
+      const order = await checkout(requestBody.member, requestBody.cart);
+      return send(res, 200, { ok:true, order });
+    } catch (err) {
+      return send(res, 409, { ok:false, error:err.message });
+    }
+  }
+  return apiBeforeSlimCheckout(req, res);
+};
+module.exports={appHandler,api,send};
