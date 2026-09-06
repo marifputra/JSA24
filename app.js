@@ -5773,20 +5773,8 @@ function clearOrders() {
 }
 
 async function resetAllData() {
-  if (SERVER_MODE) {
-    return alert('Reset data seed dimatikan di hosting agar data Supabase tidak kembali ke awal.');
-  }
-  if (!confirm('Reset semua data?')) return;
-  localStorage.setItem('jsa_products', JSON.stringify(seed.map(normalizeProduct)));
-  localStorage.setItem('jsa_categories', JSON.stringify(defaultCategories));
-  localStorage.setItem('jsa_orders', '[]');
-  localStorage.setItem('jsa_members', '[]');
-  localStorage.removeItem('jsa_cart');
-  localStorage.removeItem('jsa_member');
-  localStorage.removeItem('jsa_open_sub');
-  localStorage.removeItem(DELETED_PRODUCTS_KEY);
-  if (SERVER_MODE) await saveStateToServer(currentState());
-  location.reload();
+  // Sengaja dinonaktifkan: data toko tidak boleh dihapus massal dari browser.
+  alert('Fitur Hapus Semua Data telah dinonaktifkan untuk melindungi data toko.');
 }
 
 function escapeHtml(str) {
