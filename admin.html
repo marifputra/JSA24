@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Admin JSA</title>
-  <link rel="stylesheet" href="style.css?v=admin-session-v24">
+  <link rel="stylesheet" href="style.css?v=nota-rapi-v1">
 </head>
 <body>
 <header class="topbar">
@@ -24,7 +24,6 @@
     <div class="section-head">
       <h1>Admin JSA</h1>
       <div>
-        <button class="btn danger" onclick="resetAllData()">Hapus Semua Data</button>
         <button class="btn danger" onclick="logout()">Keluar</button>
       </div>
     </div>
@@ -37,6 +36,7 @@
       <button class="tab-btn" onclick="showAdminPage('barang')">Data Barang</button>
       <button class="tab-btn" onclick="showAdminPage('stok')">Stok Barang <span id="stockBadge" class="tab-badge hidden">0</span></button>
       <button class="tab-btn" onclick="showAdminPage('member')">Riwayat Belanja <span id="orderBadge" class="tab-badge hidden">0</span></button>
+      <button class="tab-btn" onclick="showAdminPage('promo')">Berita & Promo</button>
       <button class="tab-btn" onclick="showAdminPage('akun')">Data Member</button>
       <button class="tab-btn" onclick="showAdminPage('backup')">Backup Data</button>
     </div>
@@ -132,9 +132,25 @@
 
       <div class="stock-tabs">
         <button class="chip active" id="stockTabAlert" onclick="stockView='alert';renderStockReport()">Stok Menipis/Habis</button>
+        <button class="chip" id="stockTabPerformance" onclick="stockView='performance';renderStockReport()">Performa Penjualan</button>
         <button class="chip" id="stockTabCategory" onclick="stockView='category';renderStockReport()">Per Kelompok</button>
         <button class="chip" id="stockTabMerek" onclick="stockView='brand';renderStockReport()">Per Merek</button>
         <button class="chip" id="stockTabAll" onclick="stockView='all';renderStockReport()">Semua Barang</button>
+      </div>
+
+      <div class="form-grid labelled" id="salesSortBox">
+        <label>Urutkan performa
+          <select id="salesSort" onchange="renderStockReport()">
+            <option value="profit">Keuntungan tertinggi</option>
+            <option value="sold">Penjualan terbanyak</option>
+            <option value="revenue">Omzet tertinggi</option>
+            <option value="stockLow">Stok paling sedikit</option>
+            <option value="name">Nama barang A-Z</option>
+          </select>
+        </label>
+        <label>Catatan
+          <input value="Dihitung dari riwayat belanja dan stok terakhir" readonly>
+        </label>
       </div>
 
       <input id="stockSearch" class="search-input" placeholder="Cari stok barang..." oninput="renderStockReport()">
@@ -154,12 +170,55 @@
       <div class="panel">
         <div class="section-head">
           <div>
-            <h2>Data Member</h2>
-            <p class="hint">Daftar akun yang pernah masuk dan ringkasan belanjanya.</p>
+            <h2>Kelola Akun Member</h2>
+            <p class="hint">Admin bisa tambah akun, pilih acuan harga Member 1/2/3, dan aktifkan atau nonaktifkan akun.</p>
           </div>
-          <button class="btn danger" onclick="clearMembers()">Hapus Data Member</button>
         </div>
+        <div class="form-grid labelled">
+          <label>Username login<input id="memberUsernameAdmin" placeholder="contoh: aang"></label>
+          <label>Nama pelanggan<input id="memberNameAdmin" placeholder="Nama pelanggan"></label>
+          <label>No WhatsApp<input id="memberPhoneAdmin" placeholder="08xxxxxxxxxx"></label>
+          <label>Alamat<input id="memberAddressAdmin" placeholder="Alamat pelanggan"></label>
+          <label>Acuan harga
+            <select id="memberLevelAdmin">
+              <option value="MEMBER 1">MEMBER 1</option>
+              <option value="MEMBER 2">MEMBER 2</option>
+              <option value="MEMBER 3">MEMBER 3</option>
+            </select>
+          </label>
+          <label>Status
+            <select id="memberActiveAdmin">
+              <option value="1">Aktif</option>
+              <option value="0">Nonaktif</option>
+            </select>
+          </label>
+          <button class="btn" onclick="saveMemberAccount()">Simpan Akun</button>
+          <button class="btn secondary" onclick="clearMemberAccountForm()">Bersihkan Form</button>
+        </div>
+        <p class="hint">Password semua akun member: <b>member123</b>. Poin dan riwayat belanja dihitung otomatis dari transaksi.</p>
         <div id="memberTable"></div>
+      </div>
+    </div>
+
+    <div id="page-promo" class="admin-page">
+      <div class="panel">
+        <div class="section-head">
+          <div>
+            <h2>Berita & Promo</h2>
+            <p class="hint">Tambah atau edit slider berita/promo yang tampil di halaman depan.</p>
+          </div>
+        </div>
+        <div class="form-grid">
+          <input id="promoLabel" placeholder="Label, contoh: Promo Minggu Ini">
+          <input id="promoTitle" placeholder="Judul promo">
+          <input id="promoText" placeholder="Deskripsi singkat">
+          <input id="promoImage" placeholder="URL gambar promo">
+          <input id="promoCta" placeholder="Teks tombol, contoh: Lihat Produk">
+          <input id="promoHref" placeholder="Link tombol, contoh: #produk">
+          <button class="btn" onclick="savePromoSlide()">Simpan Promo</button>
+          <button class="btn secondary" onclick="clearPromoForm()">Bersihkan Form</button>
+        </div>
+        <div id="promoAdminList"></div>
       </div>
     </div>
 
@@ -168,10 +227,14 @@
         <div class="section-head">
           <div>
             <h2>Backup Data</h2>
-            <p class="hint">Simpan data sebelum reset, pindah laptop, atau update program.</p>
+            <p class="hint">Backup harian berisi data barang terkini, riwayat edit barang, pembeli, transaksi, dan keuntungan.</p>
           </div>
-          <button class="btn" onclick="exportData()">Export JSON</button>
+          <div class="actions">
+            <button class="btn" onclick="exportDailyBackupExcel()">Backup Harian Excel</button>
+            <button class="btn secondary" onclick="exportDailyBackupJson()">Backup Harian JSON</button>
+          </div>
         </div>
+        <p class="hint">Gunakan Excel untuk laporan harian. Gunakan JSON jika ingin import ulang data ke sistem.</p>
         <label class="file-import">
           Import JSON
           <input id="importFile" type="file" accept="application/json" onchange="importData(event)">
@@ -184,6 +247,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="config.js?v=member-order-id"></script>
 <script src="data-stok-barang.js?v=stok-1527"></script>
-<script src="app.js?v=admin-session-v24"></script>
+<script src="app.js?v=nota-nomor-v3"></script>
 </body>
 </html>
