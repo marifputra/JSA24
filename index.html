@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#123b2a" />
+  <link rel="manifest" href="/manifest.webmanifest" />
   <title>JSA Jaya Sakti Abadi</title>
   <link rel="stylesheet" href="style.css?v=admin-session-v24" />
 </head>
@@ -53,6 +55,14 @@
     </div>
 
     <div class="section-head"><h2>Daftar Barang</h2><input id="search" placeholder="Cari rokok: djarum, super 12, 76, LA, MLD, surya..." /></div>
+    <div class="barcode-entry">
+      <label for="barcodeScanner">Scan barcode barang</label>
+      <div class="barcode-entry-row">
+        <input id="barcodeScanner" type="text" autocomplete="off" placeholder="Scan atau ketik barcode, lalu tekan Enter" onkeydown="if(event.key==='Enter'){event.preventDefault();scanBarcode()}">
+        <button class="btn" type="button" onclick="scanBarcode()">Tambah ke Keranjang</button>
+      </div>
+      <small id="barcodeScanStatus" class="hint">Bisa memakai barcode scanner USB/Bluetooth yang mengetik angka lalu Enter.</small>
+    </div>
     <div class="filters" id="filters"></div>
     <div class="brand-box" id="brandFilters"></div>
     <div class="grid" id="productGrid"></div>
@@ -90,9 +100,9 @@
 
 <footer>&copy; 1980 - 2026 JSA Jaya Sakti Abadi</footer>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/vendor/jspdf.umd.min.js"></script>
 <script src="config.js?v=member-order-id"></script>
 <script src="data-stok-barang.js?v=stok-1527"></script>
-<script src="app.js?v=admin-session-v24"></script>
+<script src="app.js?v=owner-access-v1"></script>
 </body>
 </html>
