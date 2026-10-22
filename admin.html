@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="theme-color" content="#123b2a">
+  <link rel="manifest" href="/manifest.webmanifest">
   <title>Admin JSA</title>
-  <link rel="stylesheet" href="style.css?v=nota-rapi-v1">
+<link rel="stylesheet" href="style.css?v=owner-access-v1">
 </head>
 <body>
 <header class="topbar">
@@ -34,11 +36,14 @@
       <button class="tab-btn active" onclick="showAdminPage('kategori')">Kelompok Barang</button>
       <button class="tab-btn" onclick="showAdminPage('tambah')">Tambah Barang</button>
       <button class="tab-btn" onclick="showAdminPage('barang')">Data Barang</button>
-      <button class="tab-btn" onclick="showAdminPage('stok')">Stok Barang <span id="stockBadge" class="tab-badge hidden">0</span></button>
+      <button class="tab-btn" onclick="showAdminPage('inventory')">Stok Barang</button>
+      <button class="tab-btn" onclick="showAdminPage('nota')">Nota Masuk</button>
+      <button class="tab-btn" onclick="showAdminPage('harian')">Ringkasan Harian</button>
       <button class="tab-btn" onclick="showAdminPage('member')">Riwayat Belanja <span id="orderBadge" class="tab-badge hidden">0</span></button>
       <button class="tab-btn" onclick="showAdminPage('promo')">Berita & Promo</button>
       <button class="tab-btn" onclick="showAdminPage('akun')">Data Member</button>
       <button class="tab-btn" onclick="showAdminPage('backup')">Backup Data</button>
+      <button class="tab-btn" onclick="showAdminPage('owner')">Keuangan Pemilik 🔒</button>
     </div>
 
     <div id="page-kategori" class="admin-page active">
@@ -60,6 +65,8 @@
       <p class="hint">Admin bisa input harga normal, harga Member 1, dan harga Member 2 secara manual. Member 3 memakai harga normal.</p>
       <div class="form-grid labelled">
         <label>Nama produk<input id="pName" placeholder="Snack A Karton 24 pcs"></label>
+        <label>Supplier / asal barang<input id="pSupplier" placeholder="Contoh: Super"></label>
+        <label>Barcode / SKU<input id="pBarcode" inputmode="text" autocomplete="off" placeholder="Scan atau ketik barcode produk"></label>
         <label>Kategori<select id="pCategory" onchange="refreshSubOptions()"></select></label>
         <label>Jenis Barang<select id="pSub"></select></label>
         <label>Satuan besar<input id="pBigUnit" placeholder="karton / dus / sak / kotak"></label>
@@ -106,63 +113,109 @@
 
     </div>
 
-    <div id="page-stok" class="admin-page">
-    <div class="panel">
-      <div class="section-head">
-        <div>
-          <h2>Daftar Stok Barang</h2>
-          <p class="hint">Tabel ini langsung diperbarui. Barang yang stoknya sama dengan atau di bawah threshold akan ditandai <b>MENIPIS</b>.</p>
+    <div id="page-inventory" class="admin-page">
+      <div class="panel">
+        <div class="section-head stock-report-heading"><div><h2>Daftar Stok Barang</h2><p class="hint">Tabel ini langsung diperbarui. Barang yang stoknya sama dengan atau di bawah threshold akan ditandai <b>MENIPIS</b>.</p></div><div class="report-actions"><button class="btn" onclick="exportStockExcel()">Simpan Excel</button><button class="btn" onclick="exportStockPdf()">Simpan PDF</button></div></div>
+        <div class="stock-report-notes"><label>Keterangan<input readonly value="Batas sekarang diatur per produk dari daftar produk admin"></label><label>Contoh<input readonly value="Rokok 5 slop, gula 10 kg, minyak 3 liter, snack 12 pcs"></label></div>
+        <div id="stockReportSummary" class="stock-summary"></div>
+        <div class="stock-tabs">
+          <button id="stockTabAlert" class="btn secondary" onclick="setStockView('alert')">Stok Menipis/Habis</button>
+          <button id="stockTabPerformance" class="btn secondary" onclick="setStockView('performance')">Performa Penjualan</button>
+          <button id="stockTabCategory" class="btn secondary" onclick="setStockView('category')">Per Kelompok</button>
+          <button id="stockTabMerek" class="btn secondary" onclick="setStockView('brand')">Per Merek</button>
+          <button id="stockTabAll" class="btn secondary" onclick="setStockView('all')">Semua Barang</button>
         </div>
-        <div class="report-actions">
-          <button class="btn" onclick="exportStockExcel()">Simpan Excel</button>
-          <button class="btn" onclick="exportStockPdf()">Simpan PDF</button>
-        </div>
+        <div class="stock-report-controls"><label id="salesSortLabel">Urutkan performa<select id="salesSort" onchange="renderStockReport()"><option value="profit">Keuntungan tertinggi</option><option value="sold">Paling laris</option><option value="revenue">Omzet terbesar</option><option value="stockLow">Stok terendah</option><option value="name">Nama barang</option></select></label><label id="stockViewNoteLabel">Catatan<input id="stockViewNote" readonly value="Dihitung dari riwayat belanja dan stok terakhir"></label></div>
+        <input id="stockSearch" class="search-input" placeholder="Cari stok barang..." oninput="renderStockReport()">
+        <div id="stockReport"></div>
       </div>
-
-      <div class="form-grid labelled">
-        <label>Keterangan
-          <input value="Batas sekarang diatur per produk dari daftar produk admin" readonly>
-        </label>
-        <label>Contoh
-          <input value="Rokok 5 slop, gula 10 kg, minyak 3 liter, snack 12 pcs" readonly>
-        </label>
-      </div>
-
-      <div class="stock-summary" id="stockSummary"></div>
-
-      <div class="stock-tabs">
-        <button class="chip active" id="stockTabAlert" onclick="stockView='alert';renderStockReport()">Stok Menipis/Habis</button>
-        <button class="chip" id="stockTabPerformance" onclick="stockView='performance';renderStockReport()">Performa Penjualan</button>
-        <button class="chip" id="stockTabCategory" onclick="stockView='category';renderStockReport()">Per Kelompok</button>
-        <button class="chip" id="stockTabMerek" onclick="stockView='brand';renderStockReport()">Per Merek</button>
-        <button class="chip" id="stockTabAll" onclick="stockView='all';renderStockReport()">Semua Barang</button>
-      </div>
-
-      <div class="form-grid labelled" id="salesSortBox">
-        <label>Urutkan performa
-          <select id="salesSort" onchange="renderStockReport()">
-            <option value="profit">Keuntungan tertinggi</option>
-            <option value="sold">Penjualan terbanyak</option>
-            <option value="revenue">Omzet tertinggi</option>
-            <option value="stockLow">Stok paling sedikit</option>
-            <option value="name">Nama barang A-Z</option>
-          </select>
-        </label>
-        <label>Catatan
-          <input value="Dihitung dari riwayat belanja dan stok terakhir" readonly>
-        </label>
-      </div>
-
-      <input id="stockSearch" class="search-input" placeholder="Cari stok barang..." oninput="renderStockReport()">
-      <div id="stockReport"></div>
     </div>
 
+    <div id="page-nota" class="admin-page">
+      <div class="panel">
+        <div class="section-head">
+          <div><h2>Input Nota Masuk</h2><p class="hint">Catat barang dan modal dari nota supplier. Stok bertambah setelah nota disimpan.</p></div>
+        </div>
+        <div class="purchase-summary">
+          <div><span>Total nota pada tanggal ini</span><b id="purchaseDayTotal">Rp0</b></div>
+          <div><span>Dibayar pada tanggal ini</span><b id="purchaseDayPaid">Rp0</b></div>
+          <div><span>Sisa utang nota</span><b id="purchaseDayOutstanding">Rp0</b></div>
+          <div><span>Jumlah nota</span><b id="purchaseDayCount">0</b></div>
+          <div class="purchase-date"><label for="purchaseDate">Tanggal nota</label><input id="purchaseDate" type="date" onchange="loadPurchaseReceipts()"></div>
+        </div>
+        <div class="purchase-header-fields">
+          <label>Supplier<input id="purchaseSupplier" placeholder="Contoh: Super"></label>
+          <label>Nomor nota<input id="purchaseInvoice" placeholder="Nomor nota supplier (opsional)"></label>
+        </div>
+        <div class="purchase-payment-fields">
+          <label>Status pembayaran<select id="purchasePaymentMode" onchange="togglePurchasePaymentFields()"><option value="paid">Lunas saat diterima</option><option value="credit">Kredit / belum dibayar</option><option value="partial">Bayar sebagian</option></select></label>
+          <label id="purchasePaidNowLabel" class="hidden">Dibayar sekarang<input id="purchasePaidNow" type="number" min="0" step="0.01" value="0" placeholder="Jumlah dibayar"></label>
+          <label id="purchaseDueDateLabel" class="hidden">Tanggal jatuh tempo<input id="purchaseDueDate" type="date"></label>
+          <label id="purchasePaymentMethodLabel">Metode pembayaran<select id="purchasePaymentMethod"><option>Tunai</option><option>Transfer</option><option>QRIS</option><option>Lainnya</option></select></label>
+        </div>
+        <datalist id="purchaseProductOptions"></datalist>
+        <div class="table-wrap purchase-lines-wrap">
+          <table class="purchase-lines-table">
+            <thead><tr><th>Barang dari katalog</th><th>Jumlah masuk</th><th>Satuan</th><th>Modal / unit</th><th>Total baris</th><th></th></tr></thead>
+            <tbody id="purchaseLines"></tbody>
+            <tfoot><tr><th colspan="4">TOTAL NOTA</th><th id="purchaseFormTotal">Rp0</th><th></th></tr></tfoot>
+          </table>
+        </div>
+        <details class="purchase-bulk-entry"><summary>Input puluhan barang sekaligus dari Excel</summary><p class="hint">Salin 3 kolom dari Excel lalu tempel di sini: <b>Nama Barang · Jumlah Masuk · Modal per Unit</b>. Satu barang per baris. Nama harus cocok dengan katalog; yang belum cocok bisa dipilih manual setelah dimasukkan.</p><textarea id="purchaseBulkText" rows="5" placeholder="Tempel kolom barang, jumlah, dan modal dari Excel di sini"></textarea><button class="btn secondary" type="button" onclick="importPurchaseBulkRows()">Masukkan baris ke tabel</button><span id="purchaseBulkNotice" class="purchase-notice" aria-live="polite"></span></details>
+        <div class="purchase-actions"><button class="btn secondary" onclick="addPurchaseLine()">＋ Tambah baris barang</button><div><span id="purchaseSaveNotice" class="purchase-notice" aria-live="polite"></span><button id="savePurchaseButton" class="btn" onclick="savePurchaseReceipt()">Simpan nota & tambah stok</button></div></div>
+      </div>
+      <div class="panel purchase-history-panel">
+        <div class="section-head"><div><h2>Nota pada tanggal terpilih</h2><p class="hint">Riwayat ini menjadi dasar total pembelian harian.</p></div></div>
+        <input id="purchaseHistorySearch" class="search-input" placeholder="Cari supplier, nomor nota, atau barang..." oninput="purchaseHistoryPage=1;renderPurchaseHistory()">
+        <div id="purchaseHistoryTools" class="purchase-history-tools"></div>
+        <div id="purchaseHistory"></div>
+      </div>
+      <div class="panel purchase-history-panel">
+        <div class="section-head"><div><h2>Utang Supplier</h2><p class="hint">Nota kredit dan pembayaran sebagian yang belum lunas. Nota lama yang belum mencatat status pembayaran tampil sebagai “Tidak tercatat” dan tidak otomatis dianggap utang.</p></div></div>
+        <input id="purchaseDebtSearch" class="search-input" placeholder="Cari supplier atau nomor nota..." oninput="purchaseDebtPage=1;renderPurchaseDebts()">
+        <div id="purchaseDebtTools" class="purchase-history-tools"></div>
+        <div id="purchaseDebts"></div>
+      </div>
+    </div>
+
+    <div id="page-harian" class="admin-page">
+      <div class="panel">
+        <div class="section-head"><div><h2>Ringkasan Harian</h2><p class="hint">Pilih tanggal untuk melihat penjualan, keuntungan, nota masuk, dan pembayaran pada hari tersebut. Data tersimpan; halaman ini hanya memfilter tampilannya.</p></div><label class="daily-date">Tanggal laporan<input id="dailyReportDate" type="date" onchange="loadDailyReport()"></label></div>
+        <div class="daily-report-summary">
+          <div><span>Transaksi penjualan</span><b id="dailyOrderCount">0</b></div>
+          <div><span>Omzet</span><b id="dailyRevenue">Rp0</b></div>
+          <div><span>Modal barang terjual</span><b id="dailySalesModal">Rp0</b></div>
+          <div><span>Keuntungan</span><b id="dailyProfit">Rp0</b></div>
+          <div><span>Total nota masuk</span><b id="dailyPurchaseTotal">Rp0</b></div>
+          <div><span>Dibayar</span><b id="dailyPurchasePaid">Rp0</b></div>
+          <div><span>Utang nota</span><b id="dailyPurchaseDebt">Rp0</b></div>
+        </div>
+        <p class="hint">Keuntungan keseluruhan tetap dihitung dari seluruh riwayat penjualan di dashboard admin.</p>
+      </div>
+      <div class="panel">
+        <div class="section-head"><div><h2>Penjualan pada tanggal terpilih</h2><p class="hint">Rincian transaksi pada tanggal yang dipilih.</p></div></div>
+        <div id="dailySalesTable"></div>
+      </div>
+      <div class="panel">
+        <div class="section-head"><div><h2>Nota masuk pada tanggal terpilih</h2><p class="hint">Rincian nota dan status pembayarannya pada tanggal yang dipilih.</p></div></div>
+        <div id="dailyPurchasesTable"></div>
+      </div>
     </div>
 
     <div id="page-member" class="admin-page">
     <div class="panel">
-      <div class="section-head"><h2>Tabel Riwayat Belanja</h2><button class="btn danger" onclick="clearOrders()">Hapus Semua Transaksi</button></div>
-      <p class="hint">Poin member dihitung otomatis: setiap belanja Rp100.000 mendapat 1 poin.</p><div id="orderTable"></div>
+      <div class="section-head"><div><h2>Ringkasan Transaksi per Hari</h2><p class="hint">Transaksi dikelompokkan berdasarkan tanggal. Pilih satu hari untuk membuka rincian belanjanya.</p></div><button class="btn danger" onclick="clearOrders()">Hapus Semua Transaksi</button></div>
+      <p class="hint">Poin member dihitung otomatis: setiap belanja Rp100.000 mendapat 1 poin.</p>
+      <input id="orderHistorySearch" class="search-input" placeholder="Cari tanggal, nama member, atau nomor telepon..." oninput="renderOrders()">
+      <div id="orderTable"></div>
+    </div>
+  </div>
+
+  <div id="orderDayModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="orderDayTitle" onclick="if(event.target===this)closeOrderDayModal()">
+    <div class="modal-box order-day-modal-box" onclick="event.stopPropagation()">
+      <div class="modal-head"><h2 id="orderDayTitle">Transaksi</h2><button class="btn secondary" onclick="closeOrderDayModal()">Tutup</button></div>
+      <div id="orderDaySummary" class="order-day-summary"></div>
+      <div id="orderDayTransactions"></div>
     </div>
   </div>
 
@@ -242,11 +295,26 @@
       </div>
     </div>
 
+    <div id="page-owner" class="admin-page">
+      <div class="panel">
+        <div class="section-head"><div><h2>Keuangan Pemilik</h2><p class="hint">Ringkasan omzet, modal terjual, keuntungan, dan nilai modal stok hanya tersedia setelah verifikasi password pemilik.</p></div></div>
+        <div id="ownerLoginPanel" class="owner-login-panel">
+          <p class="hint">Masukkan password pemilik untuk membuka ringkasan keuangan.</p>
+          <div class="owner-login-row"><input id="ownerPassword" type="password" autocomplete="current-password" placeholder="Password pemilik" onkeydown="if(event.key==='Enter')unlockOwnerFinance()"><button class="btn" onclick="unlockOwnerFinance()">Buka Keuangan</button></div>
+          <p id="ownerLoginNotice" class="muted" aria-live="polite"></p>
+        </div>
+        <div id="ownerFinancePanel" class="hidden">
+          <div class="section-head"><p class="hint">Sesi pemilik aktif di perangkat ini.</p><button class="btn secondary" onclick="lockOwnerFinance()">Kunci kembali</button></div>
+          <div id="ownerFinanceSummary" class="owner-finance-summary"></div>
+        </div>
+      </div>
+    </div>
+
 </section>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/vendor/xlsx.full.min.js"></script>
+<script src="/vendor/jspdf.umd.min.js"></script>
 <script src="config.js?v=member-order-id"></script>
 <script src="data-stok-barang.js?v=stok-1527"></script>
-<script src="app.js?v=nota-nomor-v3"></script>
+<script src="app.js?v=owner-access-v1"></script>
 </body>
 </html>
