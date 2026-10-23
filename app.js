@@ -5790,6 +5790,8 @@ function formatOrderItemsCompact(items){
 
 let openOrderId = localStorage.getItem('jsa_open_order') || '';
 let selectedOrderDate = '';
+let orderHistoryRolloverTimer = null;
+let orderHistoryRenderedDate = '';
 
 function openOrderDayModal(date){
   selectedOrderDate=String(date||'');
@@ -6020,6 +6022,19 @@ function renderOrders() {
   if (!el) return;
   updateOrderBadge();
 
+  // Pindahkan tampilan hari ini ke ringkasan hari sebelumnya otomatis setelah
+  // tanggal berganti di WIB, termasuk bila halaman admin dibiarkan terbuka.
+  if (!orderHistoryRolloverTimer) {
+    orderHistoryRenderedDate = purchaseDateToday();
+    orderHistoryRolloverTimer = setInterval(() => {
+      const today = purchaseDateToday();
+      if (today !== orderHistoryRenderedDate) {
+        orderHistoryRenderedDate = today;
+        renderOrders();
+      }
+    }, 30000);
+  }
+
   const orders = getOrders();
   if (!orders.length) {
     el.innerHTML = '<p class="muted">Belum ada transaksi.</p>';
@@ -6033,11 +6048,18 @@ function renderOrders() {
     groups.get(date).push(order);
   });
   const query=(document.getElementById('orderHistorySearch')?.value||'').trim().toLocaleLowerCase('id');
+  const today = purchaseDateToday();
+  orderHistoryRenderedDate = today;
   const rows=[...groups.entries()].map(([date,items])=>({date,items,revenue:items.reduce((sum,o)=>sum+n(o.total),0),profit:items.reduce((sum,o)=>sum+n(o.profit),0),pending:items.filter(o=>!o.prepared).length,search:`${date} ${items.map(o=>`${o.memberName||''} ${o.memberPhone||''} ${o.id||''}`).join(' ')}`.toLocaleLowerCase('id')}))
     .filter(row=>!query||row.search.includes(query)).sort((a,b)=>b.date.localeCompare(a.date));
   el.innerHTML=rows.length?`<div class="table-wrap"><table class="order-table order-day-table"><thead><tr><th>Tanggal</th><th>Jumlah transaksi</th><th>Total belanja</th><th>Total untung</th><th>Belum disiapkan</th><th>Aksi</th></tr></thead><tbody>${rows.map(row=>{
     const dateLabel=row.date==='unknown'?'Tanggal tidak diketahui':row.date.split('-').reverse().join('/');
-    return `<tr><td><b>${escapeHtml(dateLabel)}</b></td><td>${row.items.length}</td><td>${rp(row.revenue)}</td><td><b>${rp(row.profit)}</b></td><td>${row.pending}</td><td><button class="btn" onclick="openOrderDayModal('${escapeHtml(row.date)}')">Lihat transaksi</button></td></tr>`;
+    const isToday = row.date === today;
+    const visibleItems = query && !row.date.includes(query)
+      ? row.items.filter(o=>`${o.memberName||''} ${o.memberPhone||''} ${o.id||''}`.toLocaleLowerCase('id').includes(query))
+      : row.items;
+    const summaryRow = `<tr class="${isToday?'order-day-today':''}"><td><b>${escapeHtml(dateLabel)}</b>${isToday?'<span class="order-today-badge">Hari ini</span>':''}</td><td>${row.items.length}</td><td>${rp(row.revenue)}</td><td><b>${rp(row.profit)}</b></td><td>${row.pending}</td><td>${isToday?'<span class="order-day-open-label">Transaksi tampil di bawah</span>':`<button class="btn" onclick="openOrderDayModal('${escapeHtml(row.date)}')">Lihat transaksi</button>`}</td></tr>`;
+    return summaryRow + (isToday?`<tr class="order-day-inline-row"><td colspan="6"><div class="order-day-inline"><h3>Transaksi hari ini</h3>${renderOrderDayTransactions(visibleItems)}</div></td></tr>`:'');
   }).join('')}</tbody></table></div>`:'<p class="muted">Tanggal atau member tidak ditemukan.</p>';
 
   const modal=document.getElementById('orderDayModal');
@@ -6049,7 +6071,12 @@ function renderOrders() {
   if(title)title.textContent=`Transaksi ${dateLabel}`;
   const dayTotal=selected.reduce((sum,o)=>sum+n(o.total),0),dayProfit=selected.reduce((sum,o)=>sum+n(o.profit),0);
   if(summary)summary.innerHTML=`<div><span>Transaksi</span><b>${selected.length}</b></div><div><span>Total belanja</span><b>${rp(dayTotal)}</b></div><div><span>Total untung</span><b>${rp(dayProfit)}</b></div>`;
-  if(content)content.innerHTML=`<div class="table-wrap"><table class="order-table"><thead><tr><th>Waktu</th><th>Member</th><th>Belanja</th><th>Total</th><th>Modal</th><th>Untung</th><th>Poin</th><th>Aksi</th></tr></thead><tbody>${selected.map(o=>{
+  if(content)content.innerHTML=renderOrderDayTransactions(selected);
+}
+
+function renderOrderDayTransactions(transactions){
+  if(!transactions.length)return '<p class="muted">Tidak ada transaksi yang cocok.</p>';
+  return `<div class="table-wrap"><table class="order-table"><thead><tr><th>Waktu</th><th>Member</th><th>Belanja</th><th>Total</th><th>Modal</th><th>Untung</th><th>Poin</th><th>Aksi</th></tr></thead><tbody>${transactions.map(o=>{
     const isOpen=String(openOrderId)===String(o.id);
     return `<tr class="order-main-row ${o.prepared?'order-prepared':''}"><td>${escapeHtml(o.date||'')}</td><td><b>${escapeHtml(o.memberName||'Pelanggan')}</b><br><small>${escapeHtml(o.memberPhone||'')}</small><br><span class="level-badge">${escapeHtml(o.memberLevel||'MEMBER')}</span></td><td>${formatOrderItemsCompact(o.items)}</td><td><b>${rp(o.total)}</b></td><td>${rp(o.modal)}</td><td><b>${rp(o.profit)}</b></td><td>${escapeHtml(String(o.points??0))}</td><td><button class="prep-btn ${o.prepared?'done':''}" onclick="toggleOrderPrepared(${Number(o.id)})">${o.prepared?'Sudah Disiapkan':'Siapkan'}</button><button class="small-btn" onclick="toggleOrderDetail(${Number(o.id)})">${isOpen?'Tutup detail':'Detail'}</button><button class="small-btn" onclick="downloadOrderPdf(${Number(o.id)})">PDF</button><button class="prep-btn" onclick="deleteOrderTransaction(${Number(o.id)})">Hapus Transaksi</button></td></tr>${isOpen?`<tr class="order-detail-row"><td colspan="8">${orderDetailHtml(o)}</td></tr>`:''}`;
   }).join('')}</tbody></table></div>`;
