@@ -120,6 +120,14 @@ body.member-locked nav a[href="#produk"],body.member-locked nav a[href="#member"
 .prep-btn.done{background:#dff7e9;color:#207247}
 .order-table td{vertical-align:top}
 .order-day-table{min-width:720px}
+.order-day-today{background:#eefaf2;font-weight:700}
+.order-today-badge{display:inline-block;margin-left:8px;padding:3px 8px;border-radius:999px;background:#dff7e9;color:#207247;font-size:11px;font-weight:800;white-space:nowrap}
+.order-day-open-label{color:#52707b;font-size:12px;font-weight:700}
+.order-day-inline-row>td{padding:0!important;background:#f7fbfc}
+.order-day-inline{padding:18px;border-top:1px solid #d4e8ed}
+.order-day-inline h3{margin:0 0 12px;color:var(--dark)}
+.order-day-inline .table-wrap{max-height:70vh;overflow:auto}
+.order-day-inline .order-table{min-width:1150px}
 .order-day-modal-box{max-width:1500px}
 .order-day-modal-box .table-wrap{max-height:62vh}
 .order-day-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:14px 0}
