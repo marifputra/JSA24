@@ -1,4 +1,4 @@
-const CACHE = 'jsa-riwayat-harian-inline-v1';
+const CACHE = 'jsa-riwayat-harian-card-v2';
 const CORE = [
   '/',
   '/index.html',
@@ -28,19 +28,13 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
-  event.respondWith((async () => {
-    const cached = await caches.match(request);
-    if (cached) return cached;
-    try {
-      const response = await fetch(request);
-      if (response.ok && response.type === 'basic') {
-        const cache = await caches.open(CACHE);
-        cache.put(request, response.clone());
+  event.respondWith(
+    caches.match(request).then(cached => cached || fetch(request).then(response => {
+      if (response.ok) {
+        const copy = response.clone();
+        caches.open(CACHE).then(cache => cache.put(request, copy));
       }
       return response;
-    } catch (error) {
-      if (request.mode === 'navigate') return caches.match('/index.html');
-      throw error;
-    }
-  })());
+    }))
+  );
 });
