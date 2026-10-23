@@ -100,9 +100,12 @@
 
 <footer>&copy; 1980 - 2026 JSA Jaya Sakti Abadi</footer>
 </div>
-<script src="/vendor/jspdf.umd.min.js"></script>
+<script>
+function loadPdfFallback(){if(window.jspdf||window.pdfFallbackStarted)return;window.pdfFallbackStarted=true;const script=document.createElement('script');script.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';script.onerror=()=>console.error('jsPDF gagal dimuat dari file lokal dan CDN.');document.head.appendChild(script)}
+</script>
+<script src="/vendor/jspdf.umd.min.js" onerror="loadPdfFallback()" onload="if(!window.jspdf)loadPdfFallback()"></script>
 <script src="config.js?v=member-order-id"></script>
 <script src="data-stok-barang.js?v=stok-1527"></script>
-<script src="app.js?v=owner-access-v1"></script>
+<script src="app.js?v=pdf-fallback-v1"></script>
 </body>
 </html>
