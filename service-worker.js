@@ -1,4 +1,4 @@
-const CACHE = 'jsa-local-owner-access-v1';
+const CACHE = 'jsa-riwayat-harian-inline-v1';
 const CORE = [
   '/',
   '/index.html',
