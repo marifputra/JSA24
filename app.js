@@ -3717,7 +3717,8 @@ function rememberBuyer(member) {
 
 function makeReceiptPdf(order) {
   if (!window.jspdf || !window.jspdf.jsPDF) {
-    alert('Library PDF belum terbaca. Pastikan internet aktif saat membuka web.');
+    if(window.loadPdfFallback)window.loadPdfFallback();
+    alert('Library PDF belum termuat. Pastikan file vendor/jspdf.umd.min.js ikut ter-deploy, lalu muat ulang halaman. Jika CDN sedang dimuat, klik PDF sekali lagi setelah beberapa detik.');
     return;
   }
 
@@ -5697,7 +5698,8 @@ function exportStockExcel(){
 
 function exportStockPdf(){
   if (!window.jspdf || !window.jspdf.jsPDF) {
-    alert('Library PDF belum terbaca. Pastikan internet aktif saat membuka admin.');
+    if(window.loadPdfFallback)window.loadPdfFallback();
+    alert('Library PDF belum termuat. Pastikan file vendor/jspdf.umd.min.js ikut ter-deploy, lalu muat ulang halaman. Jika CDN sedang dimuat, klik PDF sekali lagi setelah beberapa detik.');
     return;
   }
 
