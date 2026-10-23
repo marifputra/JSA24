@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#123b2a">
   <link rel="manifest" href="/manifest.webmanifest">
   <title>Admin JSA</title>
-<link rel="stylesheet" href="style.css?v=owner-access-v1">
+<link rel="stylesheet" href="style.css?v=riwayat-harian-inline-v1">
 </head>
 <body>
 <header class="topbar">
@@ -204,7 +204,7 @@
 
     <div id="page-member" class="admin-page">
     <div class="panel">
-      <div class="section-head"><div><h2>Ringkasan Transaksi per Hari</h2><p class="hint">Transaksi dikelompokkan berdasarkan tanggal. Pilih satu hari untuk membuka rincian belanjanya.</p></div><button class="btn danger" onclick="clearOrders()">Hapus Semua Transaksi</button></div>
+      <div class="section-head"><div><h2>Riwayat Belanja</h2><p class="hint">Transaksi hari ini tampil langsung. Setelah pukul 00.00 WIB, tanggal sebelumnya otomatis diringkas dan dapat dibuka kembali. Data tetap tersimpan.</p></div><button class="btn danger" onclick="clearOrders()">Hapus Semua Transaksi</button></div>
       <p class="hint">Poin member dihitung otomatis: setiap belanja Rp100.000 mendapat 1 poin.</p>
       <input id="orderHistorySearch" class="search-input" placeholder="Cari tanggal, nama member, atau nomor telepon..." oninput="renderOrders()">
       <div id="orderTable"></div>
@@ -312,9 +312,12 @@
 
 </section>
 <script src="/vendor/xlsx.full.min.js"></script>
-<script src="/vendor/jspdf.umd.min.js"></script>
+<script>
+function loadPdfFallback(){if(window.jspdf||window.pdfFallbackStarted)return;window.pdfFallbackStarted=true;const script=document.createElement('script');script.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';script.onerror=()=>console.error('jsPDF gagal dimuat dari file lokal dan CDN.');document.head.appendChild(script)}
+</script>
+<script src="/vendor/jspdf.umd.min.js" onerror="loadPdfFallback()" onload="if(!window.jspdf)loadPdfFallback()"></script>
 <script src="config.js?v=member-order-id"></script>
 <script src="data-stok-barang.js?v=stok-1527"></script>
-<script src="app.js?v=owner-access-v1"></script>
+<script src="app.js?v=riwayat-harian-inline-v1"></script>
 </body>
 </html>
