@@ -5788,6 +5788,13 @@ function formatOrderItemsCompact(items){
   return first + more;
 }
 
+function formatOrderItemsSummary(items){
+  if(!items || !items.length)return '<span class="muted">Detail barang kosong</span>';
+  const first=items.slice(0,2).map(i=>`<span title="${escapeHtml(i.name)}">${escapeHtml(i.name)} ×${escapeHtml(i.displayQty||i.qty||0)} ${escapeHtml(i.displayUnit||i.smallUnit||'')}</span>`).join('<span class="order-item-separator"> · </span>');
+  const more=items.length>2?` <small>+${items.length-2} barang</small>`:'';
+  return first+more;
+}
+
 let openOrderId = localStorage.getItem('jsa_open_order') || '';
 let selectedOrderDate = '';
 let orderHistoryRolloverTimer = null;
@@ -5978,42 +5985,7 @@ function orderDetailHtml(o){
     `;
   }
 
-  return `
-    <div class="order-detail-box">
-      <h4>Detail Belanja</h4>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Barang</th>
-              <th>Qty</th>
-              <th>Harga</th>
-              <th>Subtotal</th>
-              <th>Modal</th>
-              <th>Untung</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${items.map((i, index) => `
-              <tr>
-                <td>${escapeHtml(i.name)}</td>
-                <td>${i.displayQty || i.qty} ${escapeHtml(i.displayUnit || i.smallUnit || '')}<br><small>Stok: ${i.qtySmall || i.qty} ${escapeHtml(i.smallUnit || '')}</small></td>
-                <td>${rp(i.displayPrice || i.price || 0)}</td>
-                <td>${rp(i.subtotal)}</td>
-                <td>${rp(i.modal)}</td>
-                <td><b>${rp(i.profit)}</b></td>
-                <td>
-                  <button class="small-btn" onclick="editOrderItem(${o.id}, ${index})">Edit</button>
-                  <button class="prep-btn" onclick="deleteOrderItem(${o.id}, ${index})">Hapus</button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
+  return `<div class="order-detail-box"><h4>Detail Belanja</h4><div class="order-detail-lines">${items.map((i,index)=>`<article class="order-detail-line"><div class="order-detail-line-name"><b>${escapeHtml(i.name)}</b><small>${i.displayQty||i.qty} ${escapeHtml(i.displayUnit||i.smallUnit||'')} · stok ${i.qtySmall||i.qty} ${escapeHtml(i.smallUnit||'')}</small></div><div class="order-inline-metrics"><span>Harga <b>${rp(i.displayPrice||i.price||0)}</b></span><span>Subtotal <b>${rp(i.subtotal)}</b></span><span>Modal <b>${rp(i.modal)}</b></span><span>Untung <b>${rp(i.profit)}</b></span></div><div class="order-inline-actions"><button class="small-btn" onclick="editOrderItem(${o.id}, ${index})">Edit</button><button class="prep-btn" onclick="deleteOrderItem(${o.id}, ${index})">Hapus</button></div></article>`).join('')}</div></div>`;
 }
 
 
@@ -6052,15 +6024,14 @@ function renderOrders() {
   orderHistoryRenderedDate = today;
   const rows=[...groups.entries()].map(([date,items])=>({date,items,revenue:items.reduce((sum,o)=>sum+n(o.total),0),profit:items.reduce((sum,o)=>sum+n(o.profit),0),pending:items.filter(o=>!o.prepared).length,search:`${date} ${items.map(o=>`${o.memberName||''} ${o.memberPhone||''} ${o.id||''}`).join(' ')}`.toLocaleLowerCase('id')}))
     .filter(row=>!query||row.search.includes(query)).sort((a,b)=>b.date.localeCompare(a.date));
-  el.innerHTML=rows.length?`<div class="table-wrap"><table class="order-table order-day-table"><thead><tr><th>Tanggal</th><th>Jumlah transaksi</th><th>Total belanja</th><th>Total untung</th><th>Belum disiapkan</th><th>Aksi</th></tr></thead><tbody>${rows.map(row=>{
+  el.innerHTML=rows.length?`<div class="order-day-list">${rows.map(row=>{
     const dateLabel=row.date==='unknown'?'Tanggal tidak diketahui':row.date.split('-').reverse().join('/');
     const isToday = row.date === today;
     const visibleItems = query && !row.date.includes(query)
       ? row.items.filter(o=>`${o.memberName||''} ${o.memberPhone||''} ${o.id||''}`.toLocaleLowerCase('id').includes(query))
       : row.items;
-    const summaryRow = `<tr class="${isToday?'order-day-today':''}"><td><b>${escapeHtml(dateLabel)}</b>${isToday?'<span class="order-today-badge">Hari ini</span>':''}</td><td>${row.items.length}</td><td>${rp(row.revenue)}</td><td><b>${rp(row.profit)}</b></td><td>${row.pending}</td><td>${isToday?'<span class="order-day-open-label">Transaksi tampil di bawah</span>':`<button class="btn" onclick="openOrderDayModal('${escapeHtml(row.date)}')">Lihat transaksi</button>`}</td></tr>`;
-    return summaryRow + (isToday?`<tr class="order-day-inline-row"><td colspan="6"><div class="order-day-inline"><h3>Transaksi hari ini</h3>${renderOrderDayTransactions(visibleItems)}</div></td></tr>`:'');
-  }).join('')}</tbody></table></div>`:'<p class="muted">Tanggal atau member tidak ditemukan.</p>';
+    return `<section class="order-day-section ${isToday?'order-day-today':''}"><div class="order-day-heading"><div class="order-day-heading-date"><b>${escapeHtml(dateLabel)}</b>${isToday?'<span class="order-today-badge">Hari ini</span>':''}<small>${row.items.length} transaksi · ${row.pending} belum disiapkan</small></div><div class="order-day-heading-totals"><span>Belanja <b>${rp(row.revenue)}</b></span><span>Untung <b>${rp(row.profit)}</b></span></div><div class="order-day-heading-action">${isToday?'<span class="order-day-open-label">Rincian terbuka</span>':`<button class="btn" onclick="openOrderDayModal('${escapeHtml(row.date)}')">Lihat transaksi</button>`}</div></div>${isToday?`<div class="order-day-inline"><h3>Transaksi hari ini</h3>${renderOrderDayTransactions(visibleItems,true)}</div>`:''}</section>`;
+  }).join('')}</div>`:'<p class="muted">Tanggal atau member tidak ditemukan.</p>';
 
   const modal=document.getElementById('orderDayModal');
   if(!modal)return;
@@ -6071,15 +6042,15 @@ function renderOrders() {
   if(title)title.textContent=`Transaksi ${dateLabel}`;
   const dayTotal=selected.reduce((sum,o)=>sum+n(o.total),0),dayProfit=selected.reduce((sum,o)=>sum+n(o.profit),0);
   if(summary)summary.innerHTML=`<div><span>Transaksi</span><b>${selected.length}</b></div><div><span>Total belanja</span><b>${rp(dayTotal)}</b></div><div><span>Total untung</span><b>${rp(dayProfit)}</b></div>`;
-  if(content)content.innerHTML=renderOrderDayTransactions(selected);
+  if(content)content.innerHTML=renderOrderDayTransactions(selected,true);
 }
 
-function renderOrderDayTransactions(transactions){
+function renderOrderDayTransactions(transactions,compact=true){
   if(!transactions.length)return '<p class="muted">Tidak ada transaksi yang cocok.</p>';
-  return `<div class="table-wrap"><table class="order-table"><thead><tr><th>Waktu</th><th>Member</th><th>Belanja</th><th>Total</th><th>Modal</th><th>Untung</th><th>Poin</th><th>Aksi</th></tr></thead><tbody>${transactions.map(o=>{
+  if(compact)return `<div class="order-inline-cards">${transactions.map(o=>{
     const isOpen=String(openOrderId)===String(o.id);
-    return `<tr class="order-main-row ${o.prepared?'order-prepared':''}"><td>${escapeHtml(o.date||'')}</td><td><b>${escapeHtml(o.memberName||'Pelanggan')}</b><br><small>${escapeHtml(o.memberPhone||'')}</small><br><span class="level-badge">${escapeHtml(o.memberLevel||'MEMBER')}</span></td><td>${formatOrderItemsCompact(o.items)}</td><td><b>${rp(o.total)}</b></td><td>${rp(o.modal)}</td><td><b>${rp(o.profit)}</b></td><td>${escapeHtml(String(o.points??0))}</td><td><button class="prep-btn ${o.prepared?'done':''}" onclick="toggleOrderPrepared(${Number(o.id)})">${o.prepared?'Sudah Disiapkan':'Siapkan'}</button><button class="small-btn" onclick="toggleOrderDetail(${Number(o.id)})">${isOpen?'Tutup detail':'Detail'}</button><button class="small-btn" onclick="downloadOrderPdf(${Number(o.id)})">PDF</button><button class="prep-btn" onclick="deleteOrderTransaction(${Number(o.id)})">Hapus Transaksi</button></td></tr>${isOpen?`<tr class="order-detail-row"><td colspan="8">${orderDetailHtml(o)}</td></tr>`:''}`;
-  }).join('')}</tbody></table></div>`;
+    return `<article class="order-inline-card ${o.prepared?'order-prepared':''}"><div class="order-inline-card-head"><div><b>${escapeHtml(o.memberName||'Pelanggan')}</b><small>${escapeHtml(o.date||'')}</small></div><span class="level-badge">${escapeHtml(o.memberLevel||'MEMBER')}</span></div><div class="order-inline-products">${formatOrderItemsSummary(o.items)}</div><div class="order-inline-metrics"><span>Belanja <b>${rp(o.total)}</b></span><span>Modal <b>${rp(o.modal)}</b></span><span>Untung <b>${rp(o.profit)}</b></span><span>Poin <b>${escapeHtml(String(o.points??0))}</b></span></div><div class="order-inline-actions"><button class="prep-btn ${o.prepared?'done':''}" onclick="toggleOrderPrepared(${Number(o.id)})">${o.prepared?'Sudah Disiapkan':'Siapkan'}</button><button class="small-btn" onclick="toggleOrderDetail(${Number(o.id)})">${isOpen?'Tutup detail':'Detail'}</button><button class="small-btn" onclick="downloadOrderPdf(${Number(o.id)})">PDF</button><button class="prep-btn" onclick="deleteOrderTransaction(${Number(o.id)})">Hapus</button></div>${isOpen?orderDetailHtml(o):''}</article>`;
+  }).join('')}</div>`;
 }
 
 
